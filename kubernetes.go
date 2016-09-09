@@ -78,7 +78,7 @@ func (k *KubernetesPolicy) GetContainerPolicy(context string, containerPolicy *p
 		return err
 	}
 
-	allPolicies, err := k.kubeClient.Extensions().NetworkPolicies("").List(api.ListOptions{})
+	allPolicies, err := k.kubeClient.Extensions().NetworkPolicies("default").List(api.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	container.RunTime.Tags[datapath.TransmitterLabel] = contextID
 
 	// Adding all the specific Kubernetes K,V from the Pod.
-	targetPod, err := k.kubeClient.Pods("").Get(info.Config.Labels["io.kubernetes.pod.name"])
+	targetPod, err := k.kubeClient.Pods("default").Get(info.Config.Labels["io.kubernetes.pod.name"])
 	if err != nil {
 		fmt.Println("error getting KubeLabels: " + info.Config.Labels["io.kubernetes.pod.name"])
 		return "", nil, err
