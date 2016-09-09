@@ -73,7 +73,7 @@ func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.Net
 func (k *KubernetesPolicy) GetContainerPolicy(context string, containerPolicy *policy.ContainerInfo) error {
 
 	// Step1: Get all the rules associated with this Pod.
-	targetPod, err := k.kubeClient.Pods("").Get(containerPolicy.RunTime.Tags["io.kubernetes.pod.name"])
+	targetPod, err := k.kubeClient.Pods("default").Get(containerPolicy.RunTime.Tags["io.kubernetes.pod.name"])
 	if err != nil {
 		return err
 	}
