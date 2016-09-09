@@ -29,12 +29,9 @@ type KubernetesPolicy struct {
 }
 
 // Keep an open ready KubeClient
-func (k *KubernetesPolicy) initKubernetesClient() error {
+func (k *KubernetesPolicy) initKubernetesClient(kubeConfig string) error {
 
-	// Toupdate
-	kubeconfig := "/Users/bvandewa/.kube/config"
-
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	config, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
 		fmt.Printf("Error opening Kubeconfig: %v\n", err)
 		os.Exit(1)
@@ -145,7 +142,10 @@ func main() {
 	networks := []string{"0.0.0.0/0"}
 
 	policyEngine := NewPolicyEngine()
-	policyEngine.initKubernetesClient()
+	// Get location of the Kubeconfig file. By default in your home.
+	kubeconfig := os.Getenv("HOME") + "/.kube/config"
+
+	policyEngine.initKubernetesClient(kubeconfig)
 
 	isolator := trireme.NewIsolator(networks, policyEngine)
 
