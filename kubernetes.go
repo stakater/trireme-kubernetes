@@ -107,8 +107,11 @@ func (k *KubernetesPolicy) DeleteContainerPolicy(context string) *policy.Contain
 
 // MetadataExtractor implements the extraction of metadata from the Docker data
 func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string, *policy.ContainerInfo, error) {
+	fmt.Println("Metadata Extractor")
 
 	contextID := info.ID[:12]
+
+	fmt.Println(contextID)
 
 	container := policy.NewContainerInfo(contextID)
 	container.RunTime.Pid = info.State.Pid
@@ -127,6 +130,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	// Adding all the specific Kubernetes K,V from the Pod.
 	targetPod, err := k.kubeClient.Pods("").Get(info.Config.Labels["io.kubernetes.pod.name"])
 	if err != nil {
+		fmt.Println("error getting KubeLabels: " + info.Config.Labels["io.kubernetes.pod.name"])
 		return "", nil, err
 	}
 	// Iterate on PodLabels and add them as tags
