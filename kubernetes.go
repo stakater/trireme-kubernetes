@@ -116,7 +116,12 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	container := policy.NewContainerInfo(contextID)
 	container.RunTime.Pid = info.State.Pid
 
+	if info.NetworkSettings.IPAddress == "" {
+		fmt.Println("Missing IP")
+	}
+
 	container.RunTime.IPAddresses["bridge"] = info.NetworkSettings.IPAddress
+	fmt.Println("IP of the container: " + container.RunTime.IPAddresses["bridge"])
 	container.RunTime.Name = info.Name
 
 	for k, v := range info.Config.Labels {
