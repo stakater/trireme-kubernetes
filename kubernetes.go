@@ -14,8 +14,9 @@ import (
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme/datapath"
 	"github.com/aporeto-inc/trireme/policy"
+	"github.com/golang/glog"
 
-	"github.com/docker/engine-api/types"
+	"github.com/docker/docker/api/types"
 	"k8s.io/kubernetes/pkg/api"
 	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/apis/extensions"
@@ -27,6 +28,7 @@ import (
 type KubernetesPolicy struct {
 	cache      map[string]*policy.ContainerInfo
 	kubeClient *client.Client
+	isolator   trireme.Isolator
 }
 
 // Keep an open ready KubeClient
@@ -111,13 +113,14 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 
 	contextID := info.ID[:12]
 
+	glog.V(2).Infoln("Metadata Processor for Container ", contextID)
 	fmt.Println(contextID)
 
 	container := policy.NewContainerInfo(contextID)
 	container.RunTime.Pid = info.State.Pid
 
 	if info.NetworkSettings.IPAddress == "" {
-		fmt.Println("Missing IP")
+		glog.V(2).Infoln("No IP Found for container. Not activating ", contextID)
 	}
 
 	container.RunTime.IPAddresses["bridge"] = info.NetworkSettings.IPAddress
@@ -146,6 +149,35 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	return contextID, container, nil
 }
 
+func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
+	fmt.Println("TODO: Update Policy for ", pod.Name)
+	return nil
+}
+
+// StartPolicyWatcher initiates a go routine to keep updating the Trireme policies
+// If the Kubernetes Policies get updated.
+func (k *KubernetesPolicy) startPolicyWatcher() {
+	watcher, _ := k.kubeClient.Extensions().NetworkPolicies("default").Watch(api.ListOptions{})
+	fmt.Printf("%+v", watcher)
+	for {
+		req := <-watcher.ResultChan()
+
+		networkPolicy := req.Object.(*extensions.NetworkPolicy)
+		fmt.Println("New Policy Detected ", networkPolicy.GetName())
+		allPods, err := k.kubeClient.Pods("default").List(api.ListOptions{})
+		if err != nil {
+			fmt.Println("panic")
+		}
+		affectedPods, err := kubepox.ListPodsPerPolicy(networkPolicy, allPods)
+		if err != nil {
+			fmt.Println("panic")
+		}
+		for _, pod := range affectedPods.Items {
+			fmt.Println("affected pod: ", pod.Name)
+		}
+	}
+}
+
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: example -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n")
 	flag.PrintDefaults()
@@ -170,9 +202,11 @@ func main() {
 
 	policyEngine.initKubernetesClient(kubeconfig)
 
-	isolator := trireme.NewIsolator(networks, policyEngine)
+	policyEngine.isolator = trireme.NewIsolator(networks, policyEngine)
+
+	go policyEngine.startPolicyWatcher()
 
 	wg.Add(1)
-	isolator.Start()
+	policyEngine.isolator.Start()
 	wg.Wait()
 }
