@@ -32,9 +32,12 @@ func main() {
 	networks := []string{"0.0.0.0/0"}
 	// Get location of the Kubeconfig file. By default in your home.
 	kubeconfig := os.Getenv("HOME") + "/.kube/config"
-
+	namespace := "default"
 	// Create New PolicyEngine for Kubernetes
-	kubernetesPolicy := policy.NewKubernetesPolicy(kubeconfig)
+	kubernetesPolicy, err := policy.NewKubernetesPolicy(kubeconfig, namespace)
+	if err != nil {
+		panic(err)
+	}
 
 	// Register the PolicyEngine to the Monitor
 	isolator := trireme.NewIsolator(networks, kubernetesPolicy, nil)
@@ -42,7 +45,11 @@ func main() {
 	// Register the Isolator to KubernetesPolicy for UpdatePolicies callback
 	kubernetesPolicy.RegisterIsolator(isolator)
 
-	wg.Add(1)
+	// Start all the go routines.
+	wg.Add(2)
+	// Start monitoring Docker policies.
 	isolator.Start()
+	// Start monitoring Kubernetes Policies.
+	kubernetesPolicy.Start()
 	wg.Wait()
 }

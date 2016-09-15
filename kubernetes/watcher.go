@@ -11,8 +11,8 @@ import (
 
 // StartPolicyWatcher initiates a go routine to keep updating the Trireme policies
 // If the Kubernetes Policies get updated.
-func (k *KubernetesClient) startPolicyWatcher() {
-	watcher, _ := k.kubeClient.Extensions().NetworkPolicies("default").Watch(api.ListOptions{})
+func (k *KubernetesClient) StartPolicyWatcher() {
+	watcher, _ := k.kubeClient.Extensions().NetworkPolicies(k.namespace).Watch(api.ListOptions{})
 	fmt.Printf("%+v", watcher)
 	for {
 		req := <-watcher.ResultChan()

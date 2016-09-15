@@ -23,19 +23,19 @@ type KubernetesPolicy struct {
 	cache      map[string]*policy.ContainerInfo
 	isolator   trireme.Isolator
 	kubernetes *kubernetes.KubernetesClient
-	namespace  string
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
-func NewKubernetesPolicy(kubeconfig string) *KubernetesPolicy {
-	client := &kubernetes.KubernetesClient{}
-	client.InitKubernetesClient(kubeconfig)
+func NewKubernetesPolicy(kubeconfig string, namespace string) (*KubernetesPolicy, error) {
+	client, err := kubernetes.NewKubernetesClient(kubeconfig, namespace)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't create KubernetesClient: %v ", err)
+	}
 
 	return &KubernetesPolicy{
 		cache:      map[string]*policy.ContainerInfo{},
 		kubernetes: client,
-		namespace:  "default",
-	}
+	}, nil
 }
 
 // RegisterIsolator keeps a reference to the Isolator for Callbacks.
@@ -71,7 +71,7 @@ func (k *KubernetesPolicy) GetContainerPolicy(context string, containerPolicy *p
 		return fmt.Errorf("Container is not a KubernetesPODContainer")
 	}
 
-	allRules, err := k.kubernetes.GetRulesPerPod(podName, k.namespace)
+	allRules, err := k.kubernetes.GetRulesPerPod(podName)
 	if err != nil {
 		return fmt.Errorf("Couldn't process the pod %v through the KubernetesPolicies: %v", podName, err)
 	}
@@ -96,14 +96,14 @@ func (k *KubernetesPolicy) DeleteContainerPolicy(context string) *policy.Contain
 func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string, *policy.ContainerInfo, error) {
 	contextID := info.ID[:12]
 
-	glog.V(2).Infoln("Metadata Processor for Container: %v ", contextID)
+	glog.V(2).Infof("Metadata Processor for Container: %v ", contextID)
 	fmt.Println(contextID)
 
 	container := policy.NewContainerInfo(contextID)
 	container.RunTime.Pid = info.State.Pid
 
 	if info.NetworkSettings.IPAddress == "" {
-		glog.V(2).Infoln("No IP Found for container. Not activating ", contextID)
+		glog.V(2).Infof("No IP Found for container. Not activating ", contextID)
 	}
 
 	container.RunTime.IPAddresses["bridge"] = info.NetworkSettings.IPAddress
@@ -120,7 +120,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 
 	// Adding all the specific Kubernetes K,V from the Pod.
 	// Iterate on PodLabels and add them as tags
-	podLabels, err := k.kubernetes.GetPodLabels(info.Config.Labels["io.kubernetes.pod.name"], k.namespace)
+	podLabels, err := k.kubernetes.GetPodLabels(info.Config.Labels["io.kubernetes.pod.name"])
 	if err != nil {
 		return "", nil, fmt.Errorf("Couldn't get Kubernetes labels for container %v : %v", info.Name, err)
 	}
@@ -134,4 +134,10 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 	fmt.Println("TODO: Update Policy for ", pod.Name)
 	return nil
+}
+
+// Start starts the KubernetesPolicer as a daemon.
+// Effectively it registers as a Watcher for policy changes.
+func (k *KubernetesPolicy) Start() {
+	go k.kubernetes.StartPolicyWatcher()
 }
