@@ -105,6 +105,16 @@ func (k *KubernetesPolicy) DeleteContainerPolicy(context string) *policy.Contain
 func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string, *policy.ContainerInfo, error) {
 	containerName := info.Name
 	containerID := info.ID
+	_, ok := info.Config.Labels[KubernetesPodName]
+	if !ok {
+		glog.V(2).Infof("No podName Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
+		return "", nil, nil
+	}
+	_, ok = info.Config.Labels[KubernetesPodNamespace]
+	if !ok {
+		glog.V(2).Infof("No podNamespace Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
+		return "", nil, nil
+	}
 	contextID := containerID[:12]
 
 	glog.V(2).Infof("Processing Metadata for Docker Container: [%s]%s", containerName, containerID)
@@ -120,11 +130,9 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	container.RunTime.IPAddresses["bridge"] = info.NetworkSettings.IPAddress
 	container.RunTime.Name = info.Name
 
-	for k, v := range info.Config.Labels {
-		container.RunTime.Tags[k] = v
-	}
-
-	container.RunTime.Tags["image"] = info.Config.Image
+	//TODO: Refactor to only include the ACTUAL labels. Everything else should be outside
+	container.RunTime.Tags[KubernetesPodName] = info.Config.Labels[KubernetesPodName]
+	container.RunTime.Tags[KubernetesPodNamespace] = info.Config.Labels[KubernetesPodNamespace]
 	container.RunTime.Tags["name"] = info.Name
 	container.RunTime.Tags[datapath.TransmitterLabel] = contextID
 
