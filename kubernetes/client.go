@@ -44,14 +44,14 @@ func (k *KubernetesClient) InitKubernetesClient(kubeconfig string) error {
 }
 
 // GetRulesPerPod return the list of all the IngressRules that apply to the pod.
-func (k *KubernetesClient) GetRulesPerPod(podName string) (*[]extensions.NetworkPolicyIngressRule, error) {
+func (k *KubernetesClient) GetRulesPerPod(podName string, namespace string) (*[]extensions.NetworkPolicyIngressRule, error) {
 	// Step1: Get all the rules associated with this Pod.
-	targetPod, err := k.kubeClient.Pods(k.namespace).Get(podName)
+	targetPod, err := k.kubeClient.Pods(namespace).Get(podName)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get pod %v from Kubernetes API: %v", podName, err)
 	}
 
-	allPolicies, err := k.kubeClient.Extensions().NetworkPolicies(k.namespace).List(api.ListOptions{})
+	allPolicies, err := k.kubeClient.Extensions().NetworkPolicies(namespace).List(api.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't list all the NetworkPolicies from Kubernetes API: %v ", err)
 	}
@@ -64,11 +64,10 @@ func (k *KubernetesClient) GetRulesPerPod(podName string) (*[]extensions.Network
 }
 
 // GetPodLabels returns the list of all label associated with a pod.
-func (k *KubernetesClient) GetPodLabels(podName string) (map[string]string, error) {
-	targetPod, err := k.kubeClient.Pods(k.namespace).Get(podName)
+func (k *KubernetesClient) GetPodLabels(podName string, namespace string) (map[string]string, error) {
+	targetPod, err := k.kubeClient.Pods(namespace).Get(podName)
 	if err != nil {
 		return nil, fmt.Errorf("error getting Kubernetes labels for pod %v : %v ", podName, err)
 	}
 	return targetPod.GetLabels(), nil
-
 }

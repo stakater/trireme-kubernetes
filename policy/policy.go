@@ -16,6 +16,12 @@ import (
 	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 )
 
+// KubernetesPodName is the label used by Docker for the K8S pod name
+const KubernetesPodName = "io.kubernetes.pod.name"
+
+// KubernetesPodNamespace is the label used by Docker for the K8s namespace
+const KubernetesPodNamespace = "io.kubernetes.pod.namespace"
+
 // KubernetesPolicy represents a Trireme Policer for Kubernetes.
 // It implements the Trireme Resolver interface and implements the policies defined
 // by Kubernetes NetworkPolicy API.
@@ -54,6 +60,7 @@ func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.Net
 			}
 			for key, value := range labelsKeyValue {
 				req.Policy.Rules.AddElements([]string{key + "=" + value}, "accept")
+				fmt.Println(key, "   ", value)
 			}
 		}
 	}
@@ -65,13 +72,15 @@ func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.Net
 // Kubernetes NetworkPolicies on the Pod to which the container belongs.
 func (k *KubernetesPolicy) GetContainerPolicy(context string, containerPolicy *policy.ContainerInfo) error {
 
-	podName, ok := containerPolicy.RunTime.Tags["io.kubernetes.pod.name"]
+	fmt.Println("GetContainerPolicy")
+	podName, ok := containerPolicy.RunTime.Tags[KubernetesPodName]
 	// The container doesn't belong to Kubernetes
 	if !ok {
 		return fmt.Errorf("Container is not a KubernetesPODContainer")
 	}
+	namespace, _ := containerPolicy.RunTime.Tags[KubernetesPodNamespace]
 
-	allRules, err := k.kubernetes.GetRulesPerPod(podName)
+	allRules, err := k.kubernetes.GetRulesPerPod(podName, namespace)
 	if err != nil {
 		return fmt.Errorf("Couldn't process the pod %v through the KubernetesPolicies: %v", podName, err)
 	}
@@ -94,20 +103,21 @@ func (k *KubernetesPolicy) DeleteContainerPolicy(context string) *policy.Contain
 
 // MetadataExtractor implements the extraction of metadata from the Docker data
 func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string, *policy.ContainerInfo, error) {
-	contextID := info.ID[:12]
+	containerName := info.Name
+	containerID := info.ID
+	contextID := containerID[:12]
 
-	glog.V(2).Infof("Metadata Processor for Container: %v ", contextID)
-	fmt.Println(contextID)
+	glog.V(2).Infof("Processing Metadata for Docker Container: [%s]%s", containerName, containerID)
 
 	container := policy.NewContainerInfo(contextID)
 	container.RunTime.Pid = info.State.Pid
 
 	if info.NetworkSettings.IPAddress == "" {
-		glog.V(2).Infof("No IP Found for container. Not activating ", contextID)
+		glog.V(2).Infof("No IP Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
+		return "", nil, nil
 	}
 
 	container.RunTime.IPAddresses["bridge"] = info.NetworkSettings.IPAddress
-	fmt.Println("IP of the container: " + container.RunTime.IPAddresses["bridge"])
 	container.RunTime.Name = info.Name
 
 	for k, v := range info.Config.Labels {
@@ -120,14 +130,13 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 
 	// Adding all the specific Kubernetes K,V from the Pod.
 	// Iterate on PodLabels and add them as tags
-	podLabels, err := k.kubernetes.GetPodLabels(info.Config.Labels["io.kubernetes.pod.name"])
+	podLabels, err := k.kubernetes.GetPodLabels(info.Config.Labels[KubernetesPodName], info.Config.Labels[KubernetesPodNamespace])
 	if err != nil {
-		return "", nil, fmt.Errorf("Couldn't get Kubernetes labels for container %v : %v", info.Name, err)
+		return "", nil, fmt.Errorf("Couldn't get Kubernetes labels for container [%s]%s : %v", containerName, containerID, err)
 	}
 	for key, value := range podLabels {
 		container.RunTime.Tags[key] = value
 	}
-
 	return contextID, container, nil
 }
 
