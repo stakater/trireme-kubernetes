@@ -148,7 +148,8 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	return contextID, container, nil
 }
 
-func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
+// UpdatePodPolicy updates (replace) the policy of the pod given in parameter.
+func (k *KubernetesPolicy) UpdatePodPolicy(pod *api.Pod) error {
 	fmt.Println("TODO: Update Policy for ", pod.Name)
 	return nil
 }
@@ -156,5 +157,5 @@ func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 // Start starts the KubernetesPolicer as a daemon.
 // Effectively it registers as a Watcher for policy changes.
 func (k *KubernetesPolicy) Start() {
-	go k.kubernetes.StartPolicyWatcher()
+	go k.kubernetes.StartPolicyWatcher(k.UpdatePodPolicy)
 }
