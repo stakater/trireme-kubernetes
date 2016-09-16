@@ -7,6 +7,7 @@ import (
 
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme/datapath"
+	"github.com/aporeto-inc/trireme/datapath/lookup"
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/docker/docker/api/types"
 	"github.com/golang/glog"
@@ -27,6 +28,7 @@ const KubernetesPodNamespace = "io.kubernetes.pod.namespace"
 // by Kubernetes NetworkPolicy API.
 type KubernetesPolicy struct {
 	cache      map[string]*policy.ContainerInfo
+	podCache   map[string]string
 	isolator   trireme.Isolator
 	kubernetes *kubernetes.KubernetesClient
 }
@@ -40,6 +42,7 @@ func NewKubernetesPolicy(kubeconfig string, namespace string) (*KubernetesPolicy
 
 	return &KubernetesPolicy{
 		cache:      map[string]*policy.ContainerInfo{},
+		podCache:   make(map[string]string),
 		kubernetes: client,
 	}, nil
 }
@@ -52,6 +55,9 @@ func (k *KubernetesPolicy) RegisterIsolator(isolator trireme.Isolator) {
 
 // Right now only focus on label base rules...
 func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.NetworkPolicyIngressRule) error {
+	//TODO: Temp hack to temporary create new rules:
+	req.Policy.Rules = lookup.NewRuleDB()
+
 	for _, rule := range *allRules {
 		for _, from := range rule.From {
 			labelsKeyValue, err := apiu.LabelSelectorAsMap(from.PodSelector)
@@ -101,16 +107,34 @@ func (k *KubernetesPolicy) DeleteContainerPolicy(context string) *policy.Contain
 	return k.cache[context]
 }
 
+func (k *KubernetesPolicy) addPodToCache(context string, podName string, podNamespace string) {
+	entry := podNamespace + "/" + podName
+	k.podCache[entry] = context
+}
+
+func (k *KubernetesPolicy) getPodfromCache(podName string, podNamespace string) (string, error) {
+	entry := podNamespace + "/" + podName
+	context, ok := k.podCache[entry]
+	if !ok {
+		return "", fmt.Errorf("Pod %v not found in Cache", entry)
+	}
+	return context, nil
+}
+
+func (k *KubernetesPolicy) deletePodFromCache(context string) {
+
+}
+
 // MetadataExtractor implements the extraction of metadata from the Docker data
 func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string, *policy.ContainerInfo, error) {
 	containerName := info.Name
 	containerID := info.ID
-	_, ok := info.Config.Labels[KubernetesPodName]
+	podName, ok := info.Config.Labels[KubernetesPodName]
 	if !ok {
 		glog.V(2).Infof("No podName Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
 		return "", nil, nil
 	}
-	_, ok = info.Config.Labels[KubernetesPodNamespace]
+	podNamespace, ok := info.Config.Labels[KubernetesPodNamespace]
 	if !ok {
 		glog.V(2).Infof("No podNamespace Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
 		return "", nil, nil
@@ -145,12 +169,25 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	for key, value := range podLabels {
 		container.RunTime.Tags[key] = value
 	}
+	k.addPodToCache(contextID, podName, podNamespace)
 	return contextID, container, nil
 }
 
 // UpdatePodPolicy updates (replace) the policy of the pod given in parameter.
 func (k *KubernetesPolicy) UpdatePodPolicy(pod *api.Pod) error {
-	fmt.Println("TODO: Update Policy for ", pod.Name)
+	fmt.Println("Update pod Policy for ", pod.Name)
+	context, err := k.getPodfromCache(pod.Name, pod.Namespace)
+	if err != nil {
+		return fmt.Errorf("Error finding pod in cache: %s", err)
+	}
+	fmt.Printf("Pod %s got context id: %s \n", pod.Name, context)
+	existingContainerInfo := k.cache[context]
+	fmt.Println("before")
+	existingContainerInfo.Policy.Rules.DumpRuleDB()
+	k.GetContainerPolicy(context, existingContainerInfo)
+	fmt.Println("after")
+	existingContainerInfo.Policy.Rules.DumpRuleDB()
+	k.isolator.UpdatePolicy(context, existingContainerInfo)
 	return nil
 }
 
