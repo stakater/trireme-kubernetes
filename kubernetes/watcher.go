@@ -14,7 +14,6 @@ import (
 // If the Kubernetes Policies get updated.
 func (k *KubernetesClient) StartPolicyWatcher(UpdatedPodPolicy func(pod *api.Pod) error) {
 	watcher, _ := k.kubeClient.Extensions().NetworkPolicies(k.namespace).Watch(api.ListOptions{})
-	fmt.Printf("%+v", watcher)
 	for {
 		req := <-watcher.ResultChan()
 

@@ -11,26 +11,28 @@ import (
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/docker/docker/api/types"
 	"github.com/golang/glog"
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/apis/extensions"
 
+	"k8s.io/kubernetes/pkg/api"
 	apiu "k8s.io/kubernetes/pkg/api/unversioned"
+	"k8s.io/kubernetes/pkg/apis/extensions"
 )
 
-// KubernetesPodName is the label used by Docker for the K8S pod name
+// KubernetesPodName is the label used by Docker for the K8S pod name.
 const KubernetesPodName = "io.kubernetes.pod.name"
 
-// KubernetesPodNamespace is the label used by Docker for the K8s namespace
+// KubernetesPodNamespace is the label used by Docker for the K8S namespace.
 const KubernetesPodNamespace = "io.kubernetes.pod.namespace"
+
+// KubernetesContainerName is the label used by Docker for the K8S container name.
+const KubernetesContainerName = "io.kubernetes.container.name"
 
 // KubernetesPolicy represents a Trireme Policer for Kubernetes.
 // It implements the Trireme Resolver interface and implements the policies defined
 // by Kubernetes NetworkPolicy API.
 type KubernetesPolicy struct {
-	cache      map[string]*policy.ContainerInfo
-	podCache   map[string]string
 	isolator   trireme.Isolator
 	kubernetes *kubernetes.KubernetesClient
+	cache      *podCache
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
@@ -41,19 +43,20 @@ func NewKubernetesPolicy(kubeconfig string, namespace string) (*KubernetesPolicy
 	}
 
 	return &KubernetesPolicy{
-		cache:      map[string]*policy.ContainerInfo{},
-		podCache:   make(map[string]string),
+		cache:      &podCache{},
 		kubernetes: client,
 	}, nil
 }
 
 // RegisterIsolator keeps a reference to the Isolator for Callbacks.
 // If an isolator is already registered, this one will override the existing reference
+// TODO: Refactor to not use registration mechanism
 func (k *KubernetesPolicy) RegisterIsolator(isolator trireme.Isolator) {
 	k.isolator = isolator
 }
 
-// Right now only focus on label base rules...
+// createIndividualRules populate the RuleDB of a Container based on the list of
+// of IngressRules coming from Kubernetes
 func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.NetworkPolicyIngressRule) error {
 	//TODO: Temp hack to temporary create new rules:
 	req.Policy.Rules = lookup.NewRuleDB()
@@ -66,29 +69,29 @@ func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.Net
 			}
 			for key, value := range labelsKeyValue {
 				req.Policy.Rules.AddElements([]string{key + "=" + value}, "accept")
-				fmt.Println(key, "   ", value)
 			}
 		}
 	}
 	return nil
 }
 
+// TODO: ContextID should be meaningful: The Pod name for Kubernetes would make the most sense.
+func generateContextID(containerID string) string {
+	return containerID[:12]
+}
+
 // GetContainerPolicy returns the Policy for the targetContainers.
 // The policy for the container will be based on the defined
 // Kubernetes NetworkPolicies on the Pod to which the container belongs.
-func (k *KubernetesPolicy) GetContainerPolicy(context string, containerPolicy *policy.ContainerInfo) error {
-
-	fmt.Println("GetContainerPolicy")
-	podName, ok := containerPolicy.RunTime.Tags[KubernetesPodName]
-	// The container doesn't belong to Kubernetes
-	if !ok {
-		return fmt.Errorf("Container is not a KubernetesPODContainer")
-	}
-	namespace, _ := containerPolicy.RunTime.Tags[KubernetesPodNamespace]
-
-	allRules, err := k.kubernetes.GetRulesPerPod(podName, namespace)
+func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy *policy.ContainerInfo) error {
+	cacheEntry, err := k.getCachedPodByContextID(contextID)
 	if err != nil {
-		return fmt.Errorf("Couldn't process the pod %v through the KubernetesPolicies: %v", podName, err)
+		return fmt.Errorf("GetContainerPolicy failed. Pod not found in Cache: %s ", err)
+	}
+
+	allRules, err := k.kubernetes.GetRulesPerPod(cacheEntry.podName, cacheEntry.podNamespace)
+	if err != nil {
+		return fmt.Errorf("Couldn't get the NetworkPolicies for Pod %s : %s", cacheEntry.podName, err)
 	}
 
 	// Step2: Translate all the metadata labels to Trireme Rules
@@ -97,32 +100,18 @@ func (k *KubernetesPolicy) GetContainerPolicy(context string, containerPolicy *p
 	}
 
 	// Step3: Done
-	k.cache[context] = containerPolicy
 	return nil
 }
 
-// DeleteContainerPolicy implements the corresponding interface. We have no
-// state in this example
-func (k *KubernetesPolicy) DeleteContainerPolicy(context string) *policy.ContainerInfo {
-	return k.cache[context]
-}
-
-func (k *KubernetesPolicy) addPodToCache(context string, podName string, podNamespace string) {
-	entry := podNamespace + "/" + podName
-	k.podCache[entry] = context
-}
-
-func (k *KubernetesPolicy) getPodfromCache(podName string, podNamespace string) (string, error) {
-	entry := podNamespace + "/" + podName
-	context, ok := k.podCache[entry]
-	if !ok {
-		return "", fmt.Errorf("Pod %v not found in Cache", entry)
+// DeleteContainerPolicy deletes the container from Cache.
+// TODO: Refactor so that it only returns an error. no ContainerInfo should be returned.
+func (k *KubernetesPolicy) DeleteContainerPolicy(contextID string) *policy.ContainerInfo {
+	cacheEntry, err := k.getCachedPodByContextID(contextID)
+	if err != nil {
+		// TODO: Return error
 	}
-	return context, nil
-}
-
-func (k *KubernetesPolicy) deletePodFromCache(context string) {
-
+	k.deletePodFromCacheByContextID(contextID)
+	return cacheEntry.containerInfo
 }
 
 // MetadataExtractor implements the extraction of metadata from the Docker data
@@ -134,31 +123,42 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 		glog.V(2).Infof("No podName Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
 		return "", nil, nil
 	}
+
 	podNamespace, ok := info.Config.Labels[KubernetesPodNamespace]
 	if !ok {
 		glog.V(2).Infof("No podNamespace Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
 		return "", nil, nil
 	}
-	contextID := containerID[:12]
 
-	glog.V(2).Infof("Processing Metadata for Docker Container: [%s]%s", containerName, containerID)
-
-	container := policy.NewContainerInfo(contextID)
-	container.RunTime.Pid = info.State.Pid
-
-	if info.NetworkSettings.IPAddress == "" {
-		glog.V(2).Infof("No IP Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
+	kubeContainerName, ok := info.Config.Labels[KubernetesContainerName]
+	if !ok {
+		glog.V(2).Infof("No Kubernetes container name Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
 		return "", nil, nil
 	}
 
-	container.RunTime.IPAddresses["bridge"] = info.NetworkSettings.IPAddress
-	container.RunTime.Name = info.Name
+	// Only activate the POD Kubernetes container.
+	if kubeContainerName != "POD" {
+		glog.V(2).Infof("Kubernetes Container (%s) is not Infra container [%s]%s. Not activating ", kubeContainerName, containerName, containerID)
+		return "", nil, nil
+	}
+
+	glog.V(2).Infof("Processing Metadata for Kubernetes POD (%v) Container: [%s]%s", podName, containerName, containerID)
+
+	contextID := generateContextID(containerID)
+	containerInfo := policy.NewContainerInfo(contextID)
+	containerInfo.RunTime.Pid = info.State.Pid
+
+	//TODO: What behaviour if POD IP is found without an IP ? Erroring for now.
+	if info.NetworkSettings.IPAddress == "" {
+		return "", nil, fmt.Errorf("IP not present on Kubernetes POD (%v) container: [%s]%s", podName, containerName, containerID)
+	}
+
+	containerInfo.RunTime.IPAddresses["bridge"] = info.NetworkSettings.IPAddress
+	containerInfo.RunTime.Name = containerName
 
 	//TODO: Refactor to only include the ACTUAL labels. Everything else should be outside
-	container.RunTime.Tags[KubernetesPodName] = info.Config.Labels[KubernetesPodName]
-	container.RunTime.Tags[KubernetesPodNamespace] = info.Config.Labels[KubernetesPodNamespace]
-	container.RunTime.Tags["name"] = info.Name
-	container.RunTime.Tags[datapath.TransmitterLabel] = contextID
+	containerInfo.RunTime.Tags["name"] = info.Name
+	containerInfo.RunTime.Tags[datapath.TransmitterLabel] = contextID
 
 	// Adding all the specific Kubernetes K,V from the Pod.
 	// Iterate on PodLabels and add them as tags
@@ -167,27 +167,25 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 		return "", nil, fmt.Errorf("Couldn't get Kubernetes labels for container [%s]%s : %v", containerName, containerID, err)
 	}
 	for key, value := range podLabels {
-		container.RunTime.Tags[key] = value
+		containerInfo.RunTime.Tags[key] = value
 	}
-	k.addPodToCache(contextID, podName, podNamespace)
-	return contextID, container, nil
+
+	k.addPodToCache(contextID, containerID, podName, podNamespace, containerInfo)
+	return contextID, containerInfo, nil
 }
 
 // UpdatePodPolicy updates (replace) the policy of the pod given in parameter.
 func (k *KubernetesPolicy) UpdatePodPolicy(pod *api.Pod) error {
 	fmt.Println("Update pod Policy for ", pod.Name)
-	context, err := k.getPodfromCache(pod.Name, pod.Namespace)
+	cachedEntry, err := k.getCachedPodByName(pod.Name, pod.Namespace)
 	if err != nil {
 		return fmt.Errorf("Error finding pod in cache: %s", err)
 	}
-	fmt.Printf("Pod %s got context id: %s \n", pod.Name, context)
-	existingContainerInfo := k.cache[context]
-	fmt.Println("before")
-	existingContainerInfo.Policy.Rules.DumpRuleDB()
-	k.GetContainerPolicy(context, existingContainerInfo)
-	fmt.Println("after")
-	existingContainerInfo.Policy.Rules.DumpRuleDB()
-	k.isolator.UpdatePolicy(context, existingContainerInfo)
+	contextID, err := k.getContextIDByPodName(pod.Name, pod.Namespace)
+	if err != nil {
+		return fmt.Errorf("Error finding pod in cache: %s", err)
+	}
+	k.isolator.UpdatePolicy(contextID, cachedEntry.containerInfo)
 	return nil
 }
 
