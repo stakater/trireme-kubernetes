@@ -12,6 +12,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/golang/glog"
 
+	"k8s.io/kubernetes/pkg/api"
 	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/apis/extensions"
 )
@@ -24,6 +25,10 @@ const KubernetesPodNamespace = "io.kubernetes.pod.namespace"
 
 // KubernetesContainerName is the label used by Docker for the K8S container name.
 const KubernetesContainerName = "io.kubernetes.container.name"
+
+// KubernetesNetworkPolicyAnnotationID is the string used as an annotation key
+// to define if a namespace should have the networkpolicy framework enabled.
+const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-policy"
 
 // KubernetesPolicy represents a Trireme Policer for Kubernetes.
 // It implements the Trireme Resolver interface and implements the policies defined
@@ -173,9 +178,45 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	return contextID, containerInfo, nil
 }
 
+// updatePodPolicy updates (replace) the policy of the pod given in parameter.
+// TODO: Handle cases where the Pod is not found in cache
+func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
+	glog.V(2).Infof("Update pod Policy for %s ", pod.Name)
+	cachedEntry, err := k.cache.getCachedPodByName(pod.Name, pod.Namespace)
+	if err != nil {
+		return fmt.Errorf("Error finding pod in cache: %s", err)
+	}
+	contextID, err := k.cache.getContextIDByPodName(pod.Name, pod.Namespace)
+	if err != nil {
+		return fmt.Errorf("Error finding pod in cache: %s", err)
+	}
+	k.isolator.UpdatePolicy(contextID, cachedEntry.containerInfo)
+	return nil
+}
+
+// updateNamespacePolicy check if the policy for the namespace changed.
+// If the policy changed, it will resync all the pods on that namespace.
+func (k *KubernetesPolicy) updateNamespacePolicy(namespace *api.Namespace) error {
+
+	return nil
+}
+
+func (k *KubernetesPolicy) namespaceSync() error {
+	namespaces, err := k.kubernetes.GetAllNamespaces()
+	if err != nil {
+		return fmt.Errorf("Couldn't get all namespaces %s ", err)
+	}
+	for _, namespace := range namespaces.Items {
+		annotation := namespace.GetAnnotations()
+		fmt.Println(annotation[KubernetesNetworkPolicyAnnotationID])
+	}
+	return nil
+}
+
 // Start starts the KubernetesPolicer as a daemon.
 // Effectively it registers as a Watcher for policy changes.
 func (k *KubernetesPolicy) Start() {
 	go k.kubernetes.PolicyWatcher("", k.networkPolicyEventHandler)
 	go k.kubernetes.PodWatcher("", k.podEventHandler)
+	go k.kubernetes.NamespaceWatcher(k.namespaceHandler)
 }

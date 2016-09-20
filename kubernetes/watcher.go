@@ -30,8 +30,8 @@ func (k *KubernetesClient) PodWatcher(namespace string, podHandler func(event *w
 }
 
 // NamespaceWatcher iterates over the namespaceEvents. Each event generates a call to the parameter function.
-func (k *KubernetesClient) NamespaceWatcher(namespace string, namespaceHandler func(event *watch.Event) error) {
-	watcher, _ := k.kubeClient.Pods(namespace).Watch(api.ListOptions{})
+func (k *KubernetesClient) NamespaceWatcher(namespaceHandler func(event *watch.Event) error) {
+	watcher, _ := k.kubeClient.Namespaces().Watch(api.ListOptions{})
 	for {
 		req := <-watcher.ResultChan()
 		if err := namespaceHandler(&req); err != nil {

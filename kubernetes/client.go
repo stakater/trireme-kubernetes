@@ -75,6 +75,10 @@ func (k *KubernetesClient) GetPodLabels(podName string, namespace string) (map[s
 // GetLocalPods return a PodList with all the pods scheduled on the local node
 func (k *KubernetesClient) GetLocalPods(namespace string) (*api.PodList, error) {
 	// TODO: Generate ListOptions to match on the local node
-	podList, err := k.kubeClient.Pods(namespace).List(api.ListOptions{})
-	return podList, err
+	return k.kubeClient.Pods(namespace).List(api.ListOptions{})
+}
+
+// GetAllNamespaces return a list of all existing namespaces
+func (k *KubernetesClient) GetAllNamespaces() (*api.NamespaceList, error) {
+	return k.kubeClient.Namespaces().List(api.ListOptions{})
 }
