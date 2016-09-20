@@ -10,7 +10,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/aporeto-inc/kubernetes-integration/policy"
+	"github.com/aporeto-inc/kubernetes-integration/resolver"
 	"github.com/aporeto-inc/trireme"
 )
 
@@ -35,7 +35,7 @@ func main() {
 	kubeconfig := os.Getenv("HOME") + "/.kube/config"
 	namespace := "default"
 	// Create New PolicyEngine for Kubernetes
-	kubernetesPolicy, err := policy.NewKubernetesPolicy(kubeconfig, namespace)
+	kubernetesPolicy, err := resolver.NewKubernetesPolicy(kubeconfig, namespace)
 	if err != nil {
 		panic(err)
 	}
