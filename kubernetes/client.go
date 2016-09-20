@@ -11,24 +11,24 @@ import (
 	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 )
 
-// KubernetesClient is the Trireme representation of the KubernetesClient.
-type KubernetesClient struct {
+// Client is the Trireme representation of the Client.
+type Client struct {
 	kubeClient *client.Client
 	namespace  string
 }
 
-// NewKubernetesClient Generate and initialize a Trireme KubernetesClient object
-func NewKubernetesClient(kubeconfig string, namespace string) (*KubernetesClient, error) {
-	kubernetesClient := &KubernetesClient{}
-	err := kubernetesClient.InitKubernetesClient(kubeconfig)
+// NewClient Generate and initialize a Trireme Client object
+func NewClient(kubeconfig string, namespace string) (*Client, error) {
+	Client := &Client{}
+	err := Client.InitKubernetesClient(kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("Coultn't initialize Kubernetes Client: %v", err)
 	}
-	return kubernetesClient, nil
+	return Client, nil
 }
 
 // InitKubernetesClient Initialize the Kubernetes client
-func (k *KubernetesClient) InitKubernetesClient(kubeconfig string) error {
+func (k *Client) InitKubernetesClient(kubeconfig string) error {
 
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
 	if err != nil {
@@ -44,7 +44,7 @@ func (k *KubernetesClient) InitKubernetesClient(kubeconfig string) error {
 }
 
 // GetRulesPerPod return the list of all the IngressRules that apply to the pod.
-func (k *KubernetesClient) GetRulesPerPod(podName string, namespace string) (*[]extensions.NetworkPolicyIngressRule, error) {
+func (k *Client) GetRulesPerPod(podName string, namespace string) (*[]extensions.NetworkPolicyIngressRule, error) {
 	// Step1: Get all the rules associated with this Pod.
 	targetPod, err := k.kubeClient.Pods(namespace).Get(podName)
 	if err != nil {
@@ -64,7 +64,7 @@ func (k *KubernetesClient) GetRulesPerPod(podName string, namespace string) (*[]
 }
 
 // GetPodLabels returns the list of all label associated with a pod.
-func (k *KubernetesClient) GetPodLabels(podName string, namespace string) (map[string]string, error) {
+func (k *Client) GetPodLabels(podName string, namespace string) (map[string]string, error) {
 	targetPod, err := k.kubeClient.Pods(namespace).Get(podName)
 	if err != nil {
 		return nil, fmt.Errorf("error getting Kubernetes labels for pod %v : %v ", podName, err)
@@ -73,12 +73,12 @@ func (k *KubernetesClient) GetPodLabels(podName string, namespace string) (map[s
 }
 
 // GetLocalPods return a PodList with all the pods scheduled on the local node
-func (k *KubernetesClient) GetLocalPods(namespace string) (*api.PodList, error) {
+func (k *Client) GetLocalPods(namespace string) (*api.PodList, error) {
 	// TODO: Generate ListOptions to match on the local node
 	return k.kubeClient.Pods(namespace).List(api.ListOptions{})
 }
 
 // GetAllNamespaces return a list of all existing namespaces
-func (k *KubernetesClient) GetAllNamespaces() (*api.NamespaceList, error) {
+func (k *Client) GetAllNamespaces() (*api.NamespaceList, error) {
 	return k.kubeClient.Namespaces().List(api.ListOptions{})
 }

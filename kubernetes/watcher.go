@@ -8,7 +8,7 @@ import (
 )
 
 // PolicyWatcher iterates over the networkPolicyEvents. Each event generates a call to the parameter function.
-func (k *KubernetesClient) PolicyWatcher(namespace string, networkPolicyHandler func(event *watch.Event) error) {
+func (k *Client) PolicyWatcher(namespace string, networkPolicyHandler func(event *watch.Event) error) {
 	watcher, _ := k.kubeClient.Extensions().NetworkPolicies(namespace).Watch(api.ListOptions{})
 	for {
 		req := <-watcher.ResultChan()
@@ -19,7 +19,7 @@ func (k *KubernetesClient) PolicyWatcher(namespace string, networkPolicyHandler 
 }
 
 // PodWatcher iterates over the podEvents. Each event generates a call to the parameter function.
-func (k *KubernetesClient) PodWatcher(namespace string, podHandler func(event *watch.Event) error) {
+func (k *Client) PodWatcher(namespace string, podHandler func(event *watch.Event) error) {
 	watcher, _ := k.kubeClient.Pods(namespace).Watch(api.ListOptions{})
 	for {
 		req := <-watcher.ResultChan()
@@ -30,7 +30,7 @@ func (k *KubernetesClient) PodWatcher(namespace string, podHandler func(event *w
 }
 
 // NamespaceWatcher iterates over the namespaceEvents. Each event generates a call to the parameter function.
-func (k *KubernetesClient) NamespaceWatcher(namespaceHandler func(event *watch.Event) error) {
+func (k *Client) NamespaceWatcher(namespaceHandler func(event *watch.Event) error) {
 	watcher, _ := k.kubeClient.Namespaces().Watch(api.ListOptions{})
 	for {
 		req := <-watcher.ResultChan()

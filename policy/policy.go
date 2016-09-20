@@ -35,13 +35,13 @@ const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-poli
 // by Kubernetes NetworkPolicy API.
 type KubernetesPolicy struct {
 	isolator   trireme.Isolator
-	kubernetes *kubernetes.KubernetesClient
+	kubernetes *kubernetes.Client
 	cache      *Cache
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
 func NewKubernetesPolicy(kubeconfig string, namespace string) (*KubernetesPolicy, error) {
-	client, err := kubernetes.NewKubernetesClient(kubeconfig, namespace)
+	client, err := kubernetes.NewClient(kubeconfig, namespace)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't create KubernetesClient: %v ", err)
 	}

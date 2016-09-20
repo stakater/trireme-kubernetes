@@ -31,6 +31,7 @@ func main() {
 	var wg sync.WaitGroup
 	networks := []string{"0.0.0.0/0"}
 	// Get location of the Kubeconfig file. By default in your home.
+	// TODO: Change the way the Kuebrnetes config get loaded
 	kubeconfig := os.Getenv("HOME") + "/.kube/config"
 	namespace := "default"
 	// Create New PolicyEngine for Kubernetes
