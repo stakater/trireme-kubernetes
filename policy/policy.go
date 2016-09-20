@@ -190,6 +190,7 @@ func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 	if err != nil {
 		return fmt.Errorf("Error finding pod in cache: %s", err)
 	}
+	k.GetContainerPolicy(contextID, cachedEntry.containerInfo)
 	k.isolator.UpdatePolicy(contextID, cachedEntry.containerInfo)
 	return nil
 }
@@ -197,7 +198,8 @@ func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 // updateNamespacePolicy check if the policy for the namespace changed.
 // If the policy changed, it will resync all the pods on that namespace.
 func (k *KubernetesPolicy) updateNamespacePolicy(namespace *api.Namespace) error {
-
+	annotation := namespace.GetAnnotations()
+	fmt.Println(annotation[KubernetesNetworkPolicyAnnotationID])
 	return nil
 }
 
@@ -217,6 +219,6 @@ func (k *KubernetesPolicy) namespaceSync() error {
 // Effectively it registers as a Watcher for policy changes.
 func (k *KubernetesPolicy) Start() {
 	go k.kubernetes.PolicyWatcher("", k.networkPolicyEventHandler)
-	go k.kubernetes.PodWatcher("", k.podEventHandler)
-	go k.kubernetes.NamespaceWatcher(k.namespaceHandler)
+	//go k.kubernetes.PodWatcher("", k.podEventHandler)
+	//go k.kubernetes.NamespaceWatcher(k.namespaceHandler)
 }
