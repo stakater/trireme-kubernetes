@@ -31,7 +31,7 @@ const KubernetesContainerName = "io.kubernetes.container.name"
 type KubernetesPolicy struct {
 	isolator   trireme.Isolator
 	kubernetes *kubernetes.KubernetesClient
-	cache      *podCache
+	cache      *Cache
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
@@ -83,7 +83,7 @@ func generateContextID(containerID string) string {
 // The policy for the container will be based on the defined
 // Kubernetes NetworkPolicies on the Pod to which the container belongs.
 func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy *policy.ContainerInfo) error {
-	cacheEntry, err := k.getCachedPodByContextID(contextID)
+	cacheEntry, err := k.cache.getCachedPodByContextID(contextID)
 	if err != nil {
 		return fmt.Errorf("GetContainerPolicy failed. Pod not found in Cache: %s ", err)
 	}
@@ -105,11 +105,11 @@ func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy 
 // DeleteContainerPolicy deletes the container from Cache.
 // TODO: Refactor so that it only returns an error. no ContainerInfo should be returned.
 func (k *KubernetesPolicy) DeleteContainerPolicy(contextID string) *policy.ContainerInfo {
-	_, err := k.getCachedPodByContextID(contextID)
+	_, err := k.cache.getCachedPodByContextID(contextID)
 	if err != nil {
 		// TODO: Return error
 	}
-	k.deletePodFromCacheByContextID(contextID)
+	k.cache.deletePodFromCacheByContextID(contextID)
 	return nil
 }
 
@@ -169,7 +169,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 		containerInfo.RunTime.Tags[key] = value
 	}
 
-	k.addPodToCache(contextID, containerID, podName, podNamespace, containerInfo)
+	k.cache.addPodToCache(contextID, containerID, podName, podNamespace, containerInfo)
 	return contextID, containerInfo, nil
 }
 

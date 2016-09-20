@@ -6,11 +6,13 @@ import (
 	"github.com/aporeto-inc/trireme/policy"
 )
 
-type podCache struct {
+// Cache keeps all the state needed for the integration.
+type Cache struct {
 	// podCache keeps a mapping between a POD name and the corresponding contextID
 	contextIDCache map[string]string
 	// cache keeps a cache of the contextID to the podCacheEntry object
 	podEntryCache map[string]*podCacheEntry
+	//
 }
 
 type podCacheEntry struct {
@@ -20,8 +22,8 @@ type podCacheEntry struct {
 	containerInfo *policy.ContainerInfo
 }
 
-func newCache() *podCache {
-	return &podCache{
+func newCache() *Cache {
+	return &Cache{
 		contextIDCache: map[string]string{},
 		podEntryCache:  map[string]*podCacheEntry{},
 	}
@@ -31,7 +33,7 @@ func kubePodIdentifier(podName, podNamespace string) string {
 	return podNamespace + "/" + podName
 }
 
-func (k *KubernetesPolicy) addPodToCache(contextID string, dockerID string, podName string, podNamespace string, containerInfo *policy.ContainerInfo) {
+func (c *Cache) addPodToCache(contextID string, dockerID string, podName string, podNamespace string, containerInfo *policy.ContainerInfo) {
 	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
 	cacheEntry := &podCacheEntry{
 		podName:       podName,
@@ -40,57 +42,57 @@ func (k *KubernetesPolicy) addPodToCache(contextID string, dockerID string, podN
 		containerInfo: containerInfo,
 	}
 
-	k.cache.contextIDCache[kubeIdentifier] = contextID
-	k.cache.podEntryCache[contextID] = cacheEntry
+	c.contextIDCache[kubeIdentifier] = contextID
+	c.podEntryCache[contextID] = cacheEntry
 }
 
-func (k *KubernetesPolicy) getCachedPodByName(podName string, podNamespace string) (*podCacheEntry, error) {
-	contextID, err := k.getContextIDByPodName(podName, podNamespace)
+func (c *Cache) getCachedPodByName(podName string, podNamespace string) (*podCacheEntry, error) {
+	contextID, err := c.getContextIDByPodName(podName, podNamespace)
 	if err != nil {
 		return nil, err
 	}
-	cacheEntry, err := k.getCachedPodByContextID(contextID)
+	cacheEntry, err := c.getCachedPodByContextID(contextID)
 	if err != nil {
 		return nil, fmt.Errorf("Cache Inconsistency: %s ", err)
 	}
 	return cacheEntry, nil
 }
 
-func (k *KubernetesPolicy) getContextIDByPodName(podName string, podNamespace string) (string, error) {
+func (c *Cache) getContextIDByPodName(podName string, podNamespace string) (string, error) {
 	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
-	contextID, ok := k.cache.contextIDCache[kubeIdentifier]
+	contextID, ok := c.contextIDCache[kubeIdentifier]
 	if !ok {
 		return "", fmt.Errorf("Pod %v not found in Cache", kubeIdentifier)
 	}
 	return contextID, nil
 }
 
-func (k *KubernetesPolicy) getCachedPodByContextID(contextID string) (*podCacheEntry, error) {
-	cacheEntry, ok := k.cache.podEntryCache[contextID]
+func (c *Cache) getCachedPodByContextID(contextID string) (*podCacheEntry, error) {
+	cacheEntry, ok := c.podEntryCache[contextID]
 	if !ok {
 		return nil, fmt.Errorf("ContextID %s not found in Cache", contextID)
 	}
 	return cacheEntry, nil
 }
 
-func (k *KubernetesPolicy) deletePodFromCacheByName(podName string, podNamespace string) error {
+func (c *Cache) deletePodFromCacheByName(podName string, podNamespace string) error {
 	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
-	contextID, ok := k.cache.contextIDCache[kubeIdentifier]
+	contextID, ok := c.contextIDCache[kubeIdentifier]
 	if !ok {
 		return fmt.Errorf("Pod %v not found in Cache", kubeIdentifier)
 	}
-	delete(k.cache.contextIDCache, kubeIdentifier)
-	delete(k.cache.podEntryCache, contextID)
+	delete(c.contextIDCache, kubeIdentifier)
+	delete(c.podEntryCache, contextID)
 	return nil
 }
 
-func (k *KubernetesPolicy) deletePodFromCacheByContextID(contextID string) error {
-	cacheEntry, err := k.getCachedPodByContextID(contextID)
+func (c *Cache) deletePodFromCacheByContextID(contextID string) error {
+	cacheEntry, err := c.getCachedPodByContextID(contextID)
 	if err != nil {
 		return err
 	}
 	kubeIdentifier := kubePodIdentifier(cacheEntry.podNamespace, cacheEntry.podName)
-	delete(k.cache.contextIDCache, kubeIdentifier)
-	delete(k.cache.podEntryCache, contextID)
+	delete(c.contextIDCache, kubeIdentifier)
+	delete(c.podEntryCache, contextID)
 	return nil
 }
