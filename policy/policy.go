@@ -43,7 +43,7 @@ func NewKubernetesPolicy(kubeconfig string, namespace string) (*KubernetesPolicy
 	}
 
 	return &KubernetesPolicy{
-		cache:      &podCache{},
+		cache:      newCache(),
 		kubernetes: client,
 	}, nil
 }
@@ -106,12 +106,12 @@ func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy 
 // DeleteContainerPolicy deletes the container from Cache.
 // TODO: Refactor so that it only returns an error. no ContainerInfo should be returned.
 func (k *KubernetesPolicy) DeleteContainerPolicy(contextID string) *policy.ContainerInfo {
-	cacheEntry, err := k.getCachedPodByContextID(contextID)
+	_, err := k.getCachedPodByContextID(contextID)
 	if err != nil {
 		// TODO: Return error
 	}
 	k.deletePodFromCacheByContextID(contextID)
-	return cacheEntry.containerInfo
+	return nil
 }
 
 // MetadataExtractor implements the extraction of metadata from the Docker data
@@ -120,29 +120,29 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	containerID := info.ID
 	podName, ok := info.Config.Labels[KubernetesPodName]
 	if !ok {
-		glog.V(2).Infof("No podName Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
+		glog.V(2).Infof("No podName Found for container %s. Must not be K8S Pod Container. Not activating ", containerName)
 		return "", nil, nil
 	}
 
 	podNamespace, ok := info.Config.Labels[KubernetesPodNamespace]
 	if !ok {
-		glog.V(2).Infof("No podNamespace Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
+		glog.V(2).Infof("No podNamespace Found for container %s. Must not be K8S Pod Container. Not activating ", containerName)
 		return "", nil, nil
 	}
 
 	kubeContainerName, ok := info.Config.Labels[KubernetesContainerName]
 	if !ok {
-		glog.V(2).Infof("No Kubernetes container name Found for container [%s]%s. Must not be K8S Pod Container. Not activating ", containerName, containerID)
+		glog.V(2).Infof("No Kubernetes container name Found for container %s. Must not be K8S Pod Container. Not activating ", containerName)
 		return "", nil, nil
 	}
 
 	// Only activate the POD Kubernetes container.
 	if kubeContainerName != "POD" {
-		glog.V(2).Infof("Kubernetes Container (%s) is not Infra container [%s]%s. Not activating ", kubeContainerName, containerName, containerID)
+		glog.V(2).Infof("Kubernetes Container (%s) is not Infra container %s. Not activating ", kubeContainerName, containerName)
 		return "", nil, nil
 	}
 
-	glog.V(2).Infof("Processing Metadata for Kubernetes POD (%v) Container: [%s]%s", podName, containerName, containerID)
+	glog.V(2).Infof("Processing Metadata for Kubernetes POD (%s) Container: %s", podName, containerName)
 
 	contextID := generateContextID(containerID)
 	containerInfo := policy.NewContainerInfo(contextID)
@@ -150,7 +150,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 
 	//TODO: What behaviour if POD IP is found without an IP ? Erroring for now.
 	if info.NetworkSettings.IPAddress == "" {
-		return "", nil, fmt.Errorf("IP not present on Kubernetes POD (%v) container: [%s]%s", podName, containerName, containerID)
+		return "", nil, fmt.Errorf("IP not present on Kubernetes POD (%s) container: %s", podName, containerName)
 	}
 
 	containerInfo.RunTime.IPAddresses["bridge"] = info.NetworkSettings.IPAddress
@@ -164,7 +164,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	// Iterate on PodLabels and add them as tags
 	podLabels, err := k.kubernetes.GetPodLabels(info.Config.Labels[KubernetesPodName], info.Config.Labels[KubernetesPodNamespace])
 	if err != nil {
-		return "", nil, fmt.Errorf("Couldn't get Kubernetes labels for container [%s]%s : %v", containerName, containerID, err)
+		return "", nil, fmt.Errorf("Couldn't get Kubernetes labels for container %s : %v", containerName, err)
 	}
 	for key, value := range podLabels {
 		containerInfo.RunTime.Tags[key] = value
@@ -175,8 +175,9 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 }
 
 // UpdatePodPolicy updates (replace) the policy of the pod given in parameter.
+// TODO: Handle cases where the Pod is not found in cache
 func (k *KubernetesPolicy) UpdatePodPolicy(pod *api.Pod) error {
-	fmt.Println("Update pod Policy for ", pod.Name)
+	glog.V(2).Infof("Update pod Policy for %s ", pod.Name)
 	cachedEntry, err := k.getCachedPodByName(pod.Name, pod.Namespace)
 	if err != nil {
 		return fmt.Errorf("Error finding pod in cache: %s", err)

@@ -20,6 +20,13 @@ type podCacheEntry struct {
 	containerInfo *policy.ContainerInfo
 }
 
+func newCache() *podCache {
+	return &podCache{
+		contextIDCache: map[string]string{},
+		podEntryCache:  map[string]*podCacheEntry{},
+	}
+}
+
 func kubePodIdentifier(podName, podNamespace string) string {
 	return podNamespace + "/" + podName
 }
