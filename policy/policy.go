@@ -12,7 +12,6 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/golang/glog"
 
-	"k8s.io/kubernetes/pkg/api"
 	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/apis/extensions"
 )
@@ -174,24 +173,9 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 	return contextID, containerInfo, nil
 }
 
-// UpdatePodPolicy updates (replace) the policy of the pod given in parameter.
-// TODO: Handle cases where the Pod is not found in cache
-func (k *KubernetesPolicy) UpdatePodPolicy(pod *api.Pod) error {
-	glog.V(2).Infof("Update pod Policy for %s ", pod.Name)
-	cachedEntry, err := k.getCachedPodByName(pod.Name, pod.Namespace)
-	if err != nil {
-		return fmt.Errorf("Error finding pod in cache: %s", err)
-	}
-	contextID, err := k.getContextIDByPodName(pod.Name, pod.Namespace)
-	if err != nil {
-		return fmt.Errorf("Error finding pod in cache: %s", err)
-	}
-	k.isolator.UpdatePolicy(contextID, cachedEntry.containerInfo)
-	return nil
-}
-
 // Start starts the KubernetesPolicer as a daemon.
 // Effectively it registers as a Watcher for policy changes.
 func (k *KubernetesPolicy) Start() {
-	go k.kubernetes.StartPolicyWatcher(k.UpdatePodPolicy)
+	go k.kubernetes.PolicyWatcher("", k.networkPolicyEventHandler)
+	go k.kubernetes.PodWatcher("", k.podEventHandler)
 }
