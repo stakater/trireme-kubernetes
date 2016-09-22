@@ -47,7 +47,7 @@ func (c *Client) InitKubernetesClient(kubeconfig string) error {
 
 func (c *Client) localNodeOption() api.ListOptions {
 	fs := fields.Set(map[string]string{
-		"spec.nodeName": c.localNode,
+		"spec.nodeName": "127.0.0.1",
 	})
 	option := api.ListOptions{
 		FieldSelector: fs.AsSelector(),

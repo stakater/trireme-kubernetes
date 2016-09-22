@@ -219,6 +219,7 @@ func (k *KubernetesPolicy) namespaceSync() error {
 }
 
 func (k *KubernetesPolicy) processResultChan(resultChan <-chan watch.Event) {
+
 	for {
 		req, open := <-resultChan
 		if !open {
@@ -228,10 +229,13 @@ func (k *KubernetesPolicy) processResultChan(resultChan <-chan watch.Event) {
 		// Based on the event type, send it to a different handler.
 		switch objectType := req.Object.(type) {
 		case *extensions.NetworkPolicy:
+			glog.V(2).Infof("Processing event for object: %s", objectType)
 			k.networkPolicyEventHandler(req.Object.(*extensions.NetworkPolicy), req.Type)
 		case *api.Pod:
+			glog.V(2).Infof("Processing event for object: %s", objectType)
 			k.podEventHandler(req.Object.(*api.Pod), req.Type)
 		case *api.Namespace:
+			glog.V(2).Infof("Processing event for object: %s", objectType)
 			k.namespaceHandler(req.Object.(*api.Namespace), req.Type)
 		default:
 			glog.V(2).Infof("Not processing event for object: %s", objectType)
@@ -244,6 +248,10 @@ func (k *KubernetesPolicy) processResultChan(resultChan <-chan watch.Event) {
 // Effectively it registers watcher for:
 // Namespace, Pod and networkPolicy changes
 func (k *KubernetesPolicy) Start() {
+
+	if err := k.namespaceSync(); err != nil {
+		glog.V(2).Infof("Error Syncing namespaces %s", err)
+	}
 	// resultChan holds all the Kubernetes events.
 	resultChan := make(chan watch.Event, 1)
 
@@ -253,5 +261,6 @@ func (k *KubernetesPolicy) Start() {
 	go k.kubernetes.LocalPodWatcher("", resultChan)
 	go k.kubernetes.NamespaceWatcher(resultChan)
 
-	//
+	// Process all the queued events.
+	k.processResultChan(resultChan)
 }
