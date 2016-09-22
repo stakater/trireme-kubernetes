@@ -253,7 +253,7 @@ func (k *KubernetesPolicy) Start() {
 		glog.V(2).Infof("Error Syncing namespaces %s", err)
 	}
 	// resultChan holds all the Kubernetes events.
-	resultChan := make(chan watch.Event, 1)
+	resultChan := make(chan watch.Event)
 
 	// each specific watcher starts in its own go routine.
 	// events are all enqueued on the same resultChan
