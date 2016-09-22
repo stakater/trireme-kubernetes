@@ -15,6 +15,7 @@ import (
 type Client struct {
 	kubeClient *client.Client
 	namespace  string
+	localNode  string
 }
 
 // NewClient Generate and initialize a Trireme Client object
@@ -43,8 +44,8 @@ func (k *Client) InitKubernetesClient(kubeconfig string) error {
 	return nil
 }
 
-// GetRulesPerPod return the list of all the IngressRules that apply to the pod.
-func (k *Client) GetRulesPerPod(podName string, namespace string) (*[]extensions.NetworkPolicyIngressRule, error) {
+// PodRules return the list of all the IngressRules that apply to the pod.
+func (k *Client) PodRules(podName string, namespace string) (*[]extensions.NetworkPolicyIngressRule, error) {
 	// Step1: Get all the rules associated with this Pod.
 	targetPod, err := k.kubeClient.Pods(namespace).Get(podName)
 	if err != nil {
@@ -63,8 +64,8 @@ func (k *Client) GetRulesPerPod(podName string, namespace string) (*[]extensions
 	return allRules, nil
 }
 
-// GetPodLabels returns the list of all label associated with a pod.
-func (k *Client) GetPodLabels(podName string, namespace string) (map[string]string, error) {
+// PodLabels returns the list of all label associated with a pod.
+func (k *Client) PodLabels(podName string, namespace string) (map[string]string, error) {
 	targetPod, err := k.kubeClient.Pods(namespace).Get(podName)
 	if err != nil {
 		return nil, fmt.Errorf("error getting Kubernetes labels for pod %v : %v ", podName, err)
@@ -72,13 +73,13 @@ func (k *Client) GetPodLabels(podName string, namespace string) (map[string]stri
 	return targetPod.GetLabels(), nil
 }
 
-// GetLocalPods return a PodList with all the pods scheduled on the local node
-func (k *Client) GetLocalPods(namespace string) (*api.PodList, error) {
+// LocalPods return a PodList with all the pods scheduled on the local node
+func (k *Client) LocalPods(namespace string) (*api.PodList, error) {
 	// TODO: Generate ListOptions to match on the local node
 	return k.kubeClient.Pods(namespace).List(api.ListOptions{})
 }
 
-// GetAllNamespaces return a list of all existing namespaces
-func (k *Client) GetAllNamespaces() (*api.NamespaceList, error) {
+// AllNamespaces return a list of all existing namespaces
+func (k *Client) AllNamespaces() (*api.NamespaceList, error) {
 	return k.kubeClient.Namespaces().List(api.ListOptions{})
 }
