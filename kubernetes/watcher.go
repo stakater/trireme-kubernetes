@@ -10,7 +10,7 @@ import (
 )
 
 // PolicyWatcher iterates over the networkPolicyEvents. Each event generates a call to the parameter function.
-func (c *Client) PolicyWatcher(namespace string, networkPolicyHandler func(event *watch.Event) error) error {
+func (c *Client) PolicyWatcher(namespace string, resultChan chan<- watch.Event) error {
 	watcher, err := c.kubeClient.Extensions().NetworkPolicies(namespace).Watch(api.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Couldn't open the Policy watch channel: %s", err)
@@ -20,14 +20,13 @@ func (c *Client) PolicyWatcher(namespace string, networkPolicyHandler func(event
 		if !open {
 			glog.V(2).Infof("Error processing networkPolicyEvent : %s", err)
 		}
-		if err := networkPolicyHandler(&req); err != nil {
-			glog.V(2).Infof("Error processing networkPolicyEvent : %s", err)
-		}
+		glog.V(4).Infof("Adding NetworkPolicyEvent")
+		resultChan <- req
 	}
 }
 
 // LocalPodWatcher iterates over the podEvents. Each event generates a call to the parameter function.
-func (c *Client) LocalPodWatcher(namespace string, podHandler func(event *watch.Event) error) error {
+func (c *Client) LocalPodWatcher(namespace string, resultChan chan<- watch.Event) error {
 	option := c.localNodeOption()
 	watcher, err := c.kubeClient.Pods(namespace).Watch(option)
 	if err != nil {
@@ -38,14 +37,13 @@ func (c *Client) LocalPodWatcher(namespace string, podHandler func(event *watch.
 		if !open {
 			glog.V(2).Infof("Error processing podEvents : %s", err)
 		}
-		if err := podHandler(&req); err != nil {
-			glog.V(2).Infof("Error processing podEvents : %s", err)
-		}
+		glog.V(4).Infof("Adding PodEvent")
+		resultChan <- req
 	}
 }
 
 // NamespaceWatcher iterates over the namespaceEvents. Each event generates a call to the parameter function.
-func (c *Client) NamespaceWatcher(namespaceHandler func(event *watch.Event) error) error {
+func (c *Client) NamespaceWatcher(resultChan chan<- watch.Event) error {
 	watcher, err := c.kubeClient.Namespaces().Watch(api.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("Couldn't open the Namespace watch channel: %s", err)
@@ -55,8 +53,7 @@ func (c *Client) NamespaceWatcher(namespaceHandler func(event *watch.Event) erro
 		if !open {
 			glog.V(2).Infof("Error processing namespaceEvents : %s", err)
 		}
-		if err := namespaceHandler(&req); err != nil {
-			glog.V(2).Infof("Error processing namespaceEvents : %s", err)
-		}
+		glog.V(4).Infof("Adding NamespaceEvent")
+		resultChan <- req
 	}
 }
