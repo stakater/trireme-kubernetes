@@ -99,3 +99,19 @@ func (c *Cache) deletePodFromCacheByContextID(contextID string) error {
 	delete(c.podEntryCache, contextID)
 	return nil
 }
+
+func (c *Cache) activateNamespace(namespace string) {
+	c.namespaceActivation[namespace] = true
+}
+
+func (c *Cache) deactivateNamespace(namespace string) {
+	delete(c.namespaceActivation, namespace)
+}
+
+func (c *Cache) namespaceStatus(namespace string) bool {
+	_, ok := c.namespaceActivation[namespace]
+	if !ok {
+		return false
+	}
+	return true
+}
