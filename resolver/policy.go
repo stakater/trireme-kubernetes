@@ -15,6 +15,7 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/apis/extensions"
+	"k8s.io/kubernetes/pkg/watch"
 )
 
 // KubernetesPodName is the label used by Docker for the K8S pod name.
@@ -93,7 +94,7 @@ func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy 
 		return fmt.Errorf("GetContainerPolicy failed. Pod not found in Cache: %s ", err)
 	}
 
-	allRules, err := k.kubernetes.GetRulesPerPod(cacheEntry.podName, cacheEntry.podNamespace)
+	allRules, err := k.kubernetes.PodRules(cacheEntry.podName, cacheEntry.podNamespace)
 	if err != nil {
 		return fmt.Errorf("Couldn't get the NetworkPolicies for Pod %s : %s", cacheEntry.podName, err)
 	}
@@ -166,7 +167,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 
 	// Adding all the specific Kubernetes K,V from the Pod.
 	// Iterate on PodLabels and add them as tags
-	podLabels, err := k.kubernetes.GetPodLabels(info.Config.Labels[KubernetesPodName], info.Config.Labels[KubernetesPodNamespace])
+	podLabels, err := k.kubernetes.PodLabels(info.Config.Labels[KubernetesPodName], info.Config.Labels[KubernetesPodNamespace])
 	if err != nil {
 		return "", nil, fmt.Errorf("Couldn't get Kubernetes labels for container %s : %v", containerName, err)
 	}
@@ -204,21 +205,33 @@ func (k *KubernetesPolicy) updateNamespacePolicy(namespace *api.Namespace) error
 }
 
 func (k *KubernetesPolicy) namespaceSync() error {
-	namespaces, err := k.kubernetes.GetAllNamespaces()
+	namespaces, err := k.kubernetes.AllNamespaces()
 	if err != nil {
 		return fmt.Errorf("Couldn't get all namespaces %s ", err)
 	}
 	for _, namespace := range namespaces.Items {
 		annotation := namespace.GetAnnotations()
 		fmt.Println(annotation[KubernetesNetworkPolicyAnnotationID])
+
+		//TODO: Check on the correct annotation. For now activating all the existing namespaces
+		glog.V(2).Infof("Activating namespace %s ", namespace.Name)
+		k.cache.activateNamespace(namespace.Name)
 	}
 	return nil
 }
 
 // Start starts the KubernetesPolicer as a daemon.
-// Effectively it registers as a Watcher for policy changes.
+// Effectively it registers watcher for:
+// Namespace, Pod and networkPolicy changes
 func (k *KubernetesPolicy) Start() {
-	go k.kubernetes.PolicyWatcher("", k.networkPolicyEventHandler)
-	//go k.kubernetes.PodWatcher("", k.podEventHandler)
-	//go k.kubernetes.NamespaceWatcher(k.namespaceHandler)
+	// resultChan holds all the Kubernetes events.
+	resultChan := make(chan watch.Event, 1)
+
+	// each specific watcher starts in its own go routine.
+	// events are all enqueued on the same resultChan
+	go k.kubernetes.PolicyWatcher("", resultChan)
+	go k.kubernetes.LocalPodWatcher("", resultChan)
+	go k.kubernetes.NamespaceWatcher(resultChan)
+
+	//
 }

@@ -22,7 +22,7 @@ func (k *KubernetesPolicy) networkPolicyEventHandler(event *watch.Event) error {
 		glog.V(2).Infof("New K8S NetworkPolicy change detected: %s namespace: %s", networkPolicy.GetName(), networkPolicy.GetNamespace())
 
 		// TODO: Filter on pods from localNode only.
-		allPods, err := k.kubernetes.GetLocalPods(networkPolicy.Namespace)
+		allPods, err := k.kubernetes.LocalPods(networkPolicy.Namespace)
 		if err != nil {
 			glog.V(2).Infof("Couldn't get all pods for policy: %s", networkPolicy.GetName())
 		}
