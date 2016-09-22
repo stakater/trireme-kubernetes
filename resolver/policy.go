@@ -199,8 +199,9 @@ func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 // updateNamespacePolicy check if the policy for the namespace changed.
 // If the policy changed, it will resync all the pods on that namespace.
 func (k *KubernetesPolicy) updateNamespacePolicy(namespace *api.Namespace) error {
-	annotation := namespace.GetAnnotations()
-	fmt.Println(annotation[KubernetesNetworkPolicyAnnotationID])
+	//TODO: Check on the correct annotation. For now activating all the existing namespaces
+	glog.V(2).Infof("Activating namespace %s ", namespace.Name)
+	k.cache.activateNamespace(namespace.Name)
 	return nil
 }
 
@@ -212,12 +213,31 @@ func (k *KubernetesPolicy) namespaceSync() error {
 	for _, namespace := range namespaces.Items {
 		annotation := namespace.GetAnnotations()
 		fmt.Println(annotation[KubernetesNetworkPolicyAnnotationID])
-
-		//TODO: Check on the correct annotation. For now activating all the existing namespaces
-		glog.V(2).Infof("Activating namespace %s ", namespace.Name)
-		k.cache.activateNamespace(namespace.Name)
+		k.updateNamespacePolicy(&namespace)
 	}
 	return nil
+}
+
+func (k *KubernetesPolicy) processResultChan(resultChan <-chan watch.Event) {
+	for {
+		req, open := <-resultChan
+		if !open {
+			//TODO: Handle case where chan closes.
+		}
+
+		// Based on the event type, send it to a different handler.
+		switch objectType := req.Object.(type) {
+		case *extensions.NetworkPolicy:
+			k.networkPolicyEventHandler(req.Object.(*extensions.NetworkPolicy), req.Type)
+		case *api.Pod:
+			k.podEventHandler(req.Object.(*api.Pod), req.Type)
+		case *api.Namespace:
+			k.namespaceHandler(req.Object.(*api.Namespace), req.Type)
+		default:
+			glog.V(2).Infof("Not processing event for object: %s", objectType)
+		}
+
+	}
 }
 
 // Start starts the KubernetesPolicer as a daemon.
