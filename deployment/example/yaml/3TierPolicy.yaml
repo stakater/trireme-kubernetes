@@ -1,0 +1,58 @@
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+ name: frontend-policy
+spec:
+ podSelector:
+  matchLabels:
+    role: WebFrontend
+ ingress:
+  - from:
+     - podSelector:
+        matchLabels:
+         role: WebFrontend
+     - podSelector:
+        matchLabels:
+         role: BusinessBackend
+    ports:
+     - protocol: tcp
+       port: 80
+     - protocol: tcp
+       port: 8080
+---
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+ name: backend-policy
+spec:
+ podSelector:
+  matchLabels:
+    role: BusinessBackend
+ ingress:
+  - from:
+     - podSelector:
+        matchLabels:
+         role: WebFrontend
+     - podSelector:
+        matchLabels:
+         role: BusinessBackend
+     - podSelector:
+        matchLabels:
+         role: Database
+---
+apiVersion: extensions/v1beta1
+kind: NetworkPolicy
+metadata:
+ name: database-policy
+spec:
+ podSelector:
+  matchLabels:
+    role: Database
+ ingress:
+  - from:
+     - podSelector:
+        matchLabels:
+         role: BusinessBackend
+     - podSelector:
+        matchLabels:
+         role: Database
