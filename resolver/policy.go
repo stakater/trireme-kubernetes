@@ -122,9 +122,11 @@ func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy 
 // DeleteContainerPolicy deletes the container from Cache.
 // TODO: Refactor so that it only returns an error. no ContainerInfo should be returned.
 func (k *KubernetesPolicy) DeleteContainerPolicy(contextID string) *policy.ContainerInfo {
+	glog.V(2).Infof("Deleting Container Policy %s", contextID)
 	_, err := k.cache.getCachedPodByContextID(contextID)
 	if err != nil {
 		// TODO: Return error
+		glog.V(2).Infof("Couldn't find Pod for ContextID %s", contextID)
 	}
 	k.cache.deletePodFromCacheByContextID(contextID)
 	return nil

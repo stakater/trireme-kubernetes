@@ -73,8 +73,9 @@ func (n *NamespaceWatcher) syncNamespace(client *kubernetes.Client, updatePod fu
 		return fmt.Errorf("Cannot get local Pods for Namespace %s: %s", n.namespace, err)
 	}
 	for _, pod := range localNamespacePods.Items {
-		if updatePod(&pod) != nil {
-			fmt.Printf("Sync of Pod %s in namespace %s failed: %s", pod.Name, pod.Namespace, err)
+		if err := updatePod(&pod); err != nil {
+			glog.V(2).Infof("Sync of Pod %s in namespace %s failed: %s", pod.Name, pod.Namespace, err)
+
 		}
 	}
 	return nil
