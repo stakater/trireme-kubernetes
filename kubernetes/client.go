@@ -15,7 +15,6 @@ import (
 // Client is the Trireme representation of the Client.
 type Client struct {
 	kubeClient *client.Client
-	namespace  string
 	localNode  string
 }
 

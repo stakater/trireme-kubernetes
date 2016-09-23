@@ -35,9 +35,11 @@ const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-poli
 // It implements the Trireme Resolver interface and implements the policies defined
 // by Kubernetes NetworkPolicy API.
 type KubernetesPolicy struct {
-	isolator   trireme.Isolator
-	kubernetes *kubernetes.Client
-	cache      *Cache
+	isolator          trireme.Isolator
+	kubernetes        *kubernetes.Client
+	cache             *Cache
+	stopAll           chan bool
+	stopNamespaceChan chan bool
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
@@ -201,7 +203,9 @@ func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 func (k *KubernetesPolicy) updateNamespacePolicy(namespace *api.Namespace) error {
 	//TODO: Check on the correct annotation. For now activating all the existing namespaces
 	glog.V(2).Infof("Activating namespace %s ", namespace.Name)
-	k.cache.activateNamespace(namespace.Name)
+	namespaceWatcher := NewNamespaceWatcher(k.kubernetes, namespace.Name)
+	namespaceWatcher.startWatchingNamespace(k.podEventHandler, k.networkPolicyEventHandler)
+	k.cache.activateNamespace(namespace.Name, namespaceWatcher)
 	return nil
 }
 
@@ -218,29 +222,19 @@ func (k *KubernetesPolicy) namespaceSync() error {
 	return nil
 }
 
-func (k *KubernetesPolicy) processResultChan(resultChan <-chan watch.Event) {
-
+func (k *KubernetesPolicy) processNamespaces(resultChan <-chan watch.Event, stopChan <-chan bool) {
 	for {
-		req, open := <-resultChan
-		if !open {
-			//TODO: Handle case where chan closes.
+		select {
+		case <-stopChan:
+			glog.V(2).Infof("Stopping namespace processor ")
+			return
+		case req := <-resultChan:
+			namespace := req.Object.(*api.Namespace)
+			glog.V(2).Infof("Processing namespace event for NS %s ", namespace.GetName())
+			if !k.cache.namespaceStatus(namespace.GetName()) {
+				k.updateNamespacePolicy(namespace)
+			}
 		}
-
-		// Based on the event type, send it to a different handler.
-		switch objectType := req.Object.(type) {
-		case *extensions.NetworkPolicy:
-			glog.V(2).Infof("Processing event for object: %s", objectType)
-			k.networkPolicyEventHandler(req.Object.(*extensions.NetworkPolicy), req.Type)
-		case *api.Pod:
-			glog.V(2).Infof("Processing event for object: %s", objectType)
-			k.podEventHandler(req.Object.(*api.Pod), req.Type)
-		case *api.Namespace:
-			glog.V(2).Infof("Processing event for object: %s", objectType)
-			k.namespaceHandler(req.Object.(*api.Namespace), req.Type)
-		default:
-			glog.V(2).Infof("Not processing event for object: %s", objectType)
-		}
-
 	}
 }
 
@@ -252,15 +246,21 @@ func (k *KubernetesPolicy) Start() {
 	if err := k.namespaceSync(); err != nil {
 		glog.V(2).Infof("Error Syncing namespaces %s", err)
 	}
-	// resultChan holds all the Kubernetes events.
-	resultChan := make(chan watch.Event)
-
-	// each specific watcher starts in its own go routine.
-	// events are all enqueued on the same resultChan
-	go k.kubernetes.PolicyWatcher("", resultChan)
-	go k.kubernetes.LocalPodWatcher("", resultChan)
-	go k.kubernetes.NamespaceWatcher(resultChan)
+	// resultChan holds all the Kubernetes namespaces events.
+	resultNamespaceChan := make(chan watch.Event)
+	k.stopNamespaceChan = make(chan bool)
+	go k.kubernetes.NamespaceWatcher(resultNamespaceChan, k.stopNamespaceChan)
 
 	// Process all the queued events.
-	k.processResultChan(resultChan)
+	k.stopAll = make(chan bool)
+	k.processNamespaces(resultNamespaceChan, k.stopAll)
+}
+
+// Stop Stops all the channels
+func (k *KubernetesPolicy) Stop() {
+	k.stopAll <- true
+	k.stopNamespaceChan <- true
+	for _, namespaceWatcher := range k.cache.namespaceActivation {
+		namespaceWatcher.stopWatchingNamespace()
+	}
 }

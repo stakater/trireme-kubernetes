@@ -14,8 +14,10 @@ func (c *Client) PolicyWatcher(namespace string, resultChan chan<- watch.Event, 
 	for {
 		watcher, err := c.kubeClient.Extensions().NetworkPolicies(namespace).Watch(api.ListOptions{})
 		if err != nil {
-			return fmt.Errorf("Couldn't open the Policy watch channel: %s", err)
+			glog.V(4).Infof("Couldn't open the policy (ns %s)watch channel: %s", namespace, err)
+			return fmt.Errorf("Couldn't open the policy (ns: %s)watch channel: %s", namespace, err)
 		}
+	Watch:
 		for {
 			select {
 			case <-stopChan:
@@ -23,7 +25,7 @@ func (c *Client) PolicyWatcher(namespace string, resultChan chan<- watch.Event, 
 			case req, open := <-watcher.ResultChan():
 				if !open {
 					glog.V(2).Infof("NetworkPolicy Watcher channel closed.")
-					break
+					break Watch
 				}
 				glog.V(4).Infof("Adding NetworkPolicyEvent")
 				resultChan <- req
@@ -38,16 +40,18 @@ func (c *Client) LocalPodWatcher(namespace string, resultChan chan<- watch.Event
 	for {
 		watcher, err := c.kubeClient.Pods(namespace).Watch(option)
 		if err != nil {
-			return fmt.Errorf("Couldn't open the Pod watch channel: %s", err)
+			glog.V(4).Infof("Couldn't open the Pod (ns:%s) watch channel: %s", namespace, err)
+			return fmt.Errorf("Couldn't open the Pod (ns:%s) watch channel: %s", namespace, err)
 		}
+	Watch:
 		for {
 			select {
 			case <-stopChan:
 				return nil
 			case req, open := <-watcher.ResultChan():
 				if !open {
-					glog.V(2).Infof("Namespace Watcher channel closed.")
-					break
+					glog.V(2).Infof("LocalPod Watcher channel closed.")
+					break Watch
 				}
 				glog.V(4).Infof("Adding PodEvent")
 				resultChan <- req
@@ -61,16 +65,18 @@ func (c *Client) NamespaceWatcher(resultChan chan<- watch.Event, stopChan <-chan
 	for {
 		watcher, err := c.kubeClient.Namespaces().Watch(api.ListOptions{})
 		if err != nil {
+			glog.V(4).Infof("Couldn't open the Namespace watch channel: %s", err)
 			return fmt.Errorf("Couldn't open the Namespace watch channel: %s", err)
 		}
+	Watch:
 		for {
 			select {
 			case <-stopChan:
 				return nil
 			case req, open := <-watcher.ResultChan():
 				if !open {
-					glog.V(2).Infof("Namespace Watcher channel closed.")
-					break
+					glog.V(2).Infof("NamespaceWatcher channel closed.")
+					break Watch
 				}
 				glog.V(4).Infof("Adding NamespaceEvent")
 				resultChan <- req
