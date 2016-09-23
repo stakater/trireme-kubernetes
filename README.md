@@ -27,8 +27,8 @@ go build
 Provision example policies and example pods:
 
 ```
-kubectl create -f /root/golang/yaml/3TierPolicies.yaml
-kubectl create -f /root/golang/yaml/3TierPods.yaml
+kubectl create -f deployment/example/yaml/3TierPolicies.yaml
+kubectl create -f deployment/example/yaml/3TierPods.yaml
 ```
 
 Try to  connect to your pods from other pods:
