@@ -100,11 +100,22 @@ func (c *Cache) deletePodFromCacheByContextID(contextID string) error {
 	return nil
 }
 
-func (c *Cache) activateNamespace(namespace string, namespaceWatcher *NamespaceWatcher) {
+func (c *Cache) getNamespaceWatcher(namespace string) (*NamespaceWatcher, bool) {
+	namespaceWatcher, ok := c.namespaceActivation[namespace]
+	return namespaceWatcher, ok
+}
+
+func (c *Cache) activateNamespaceWatcher(namespace string, namespaceWatcher *NamespaceWatcher) {
 	c.namespaceActivation[namespace] = namespaceWatcher
 }
 
-func (c *Cache) deactivateNamespace(namespace string) {
+func (c *Cache) deactivateNamespaceWatcher(namespace string) {
+	namespaceWatcher, ok := c.namespaceActivation[namespace]
+	if !ok {
+		return
+	}
+	namespaceWatcher.podStopChan <- true
+	namespaceWatcher.policyStopChan <- true
 	delete(c.namespaceActivation, namespace)
 }
 
