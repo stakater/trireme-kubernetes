@@ -49,16 +49,3 @@ func (k *KubernetesPolicy) podEventHandler(pod *api.Pod, eventType watch.EventTy
 	}
 	return nil
 }
-
-// namespaceHandler handles the namespace events
-func (k *KubernetesPolicy) namespaceHandler(namespace *api.Namespace, eventType watch.EventType) error {
-	switch eventType {
-	case watch.Added, watch.Modified, watch.Deleted:
-
-		glog.V(2).Infof("New K8S namespace change detected: %s ", namespace.GetName())
-
-	case watch.Error:
-		return fmt.Errorf("Error on namespace event channel ")
-	}
-	return nil
-}
