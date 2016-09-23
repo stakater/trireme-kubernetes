@@ -98,6 +98,13 @@ func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy 
 		return fmt.Errorf("GetContainerPolicy failed. Pod not found in Cache: %s ", err)
 	}
 
+	// Check if the Pod's namespace is activated.
+	if !k.cache.namespaceStatus(cacheEntry.podNamespace) {
+		// TODO: Find a way to tell to TRIREME Allow All ??
+		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll", cacheEntry.podNamespace)
+		return nil
+	}
+
 	allRules, err := k.kubernetes.PodRules(cacheEntry.podName, cacheEntry.podNamespace)
 	if err != nil {
 		return fmt.Errorf("Couldn't get the NetworkPolicies for Pod %s : %s", cacheEntry.podName, err)
@@ -186,7 +193,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 // updatePodPolicy updates (replace) the policy of the pod given in parameter.
 // TODO: Handle cases where the Pod is not found in cache
 func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
-	glog.V(2).Infof("Update pod Policy for %s ", pod.Name)
+	glog.V(2).Infof("Update pod Policy for %s , namespace %s ", pod.Name, pod.Namespace)
 	cachedEntry, err := k.cache.getCachedPodByName(pod.Name, pod.Namespace)
 	if err != nil {
 		return fmt.Errorf("Error finding pod in cache: %s", err)
@@ -206,9 +213,7 @@ func (k *KubernetesPolicy) namespaceSync() error {
 		return fmt.Errorf("Couldn't get all namespaces %s ", err)
 	}
 	for _, namespace := range namespaces.Items {
-		annotation := namespace.GetAnnotations()
-		fmt.Println(annotation[KubernetesNetworkPolicyAnnotationID])
-		k.updateNamespacePolicy(&namespace, watch.Added)
+		k.updateNamespace(&namespace, watch.Added)
 	}
 	return nil
 }
@@ -222,32 +227,74 @@ func (k *KubernetesPolicy) processNamespacesEvent(resultChan <-chan watch.Event,
 		case req := <-resultChan:
 			namespace := req.Object.(*api.Namespace)
 			glog.V(2).Infof("Processing namespace event for NS %s ", namespace.GetName())
-			k.updateNamespacePolicy(namespace, req.Type)
+			k.updateNamespace(namespace, req.Type)
 		}
 	}
 }
 
-// updateNamespacePolicy check if the policy for the namespace changed.
-// If the policy changed, it will resync all the pods on that namespace.
-func (k *KubernetesPolicy) updateNamespacePolicy(namespace *api.Namespace, eventType watch.EventType) error {
+// NamespacePolicyActivated returns true if the namespace has NetworkPolicies
+// activated on the annotation
+func NamespacePolicyActivated(namespace *api.Namespace) bool {
 	//TODO: Check on the correct annotation. For now activating all the existing namespaces
+	return true
+}
+
+func (k *KubernetesPolicy) activateNamespace(namespace *api.Namespace) error {
+	glog.V(2).Infof("Activating namespace %s ", namespace.Name)
+	namespaceWatcher := NewNamespaceWatcher(k.kubernetes, namespace.Name)
+	// SyncExistingPods on Namespace
+	namespaceWatcher.syncNamespace(k.kubernetes, k.updatePodPolicy)
+	// Start watching new POD/Policy events.
+	go namespaceWatcher.startWatchingNamespace(k.podEventHandler, k.networkPolicyEventHandler)
+	k.cache.activateNamespaceWatcher(namespace.Name, namespaceWatcher)
+	return nil
+}
+
+func (k *KubernetesPolicy) deactivateNamespace(namespace *api.Namespace) error {
+	glog.V(2).Infof("Deactivating namespace %s ", namespace.GetName())
+	k.cache.deactivateNamespaceWatcher(namespace.GetName())
+	return nil
+}
+
+// updateNamespace check if the policy for the namespace changed.
+// If the policy changed, it will resync all the pods on that namespace.
+func (k *KubernetesPolicy) updateNamespace(namespace *api.Namespace, eventType watch.EventType) error {
 	switch eventType {
 	case watch.Added:
-		if !k.cache.namespaceStatus(namespace.GetName()) {
-			glog.V(2).Infof("Activating namespace %s ", namespace.Name)
-			namespaceWatcher := NewNamespaceWatcher(k.kubernetes, namespace.Name)
-			go namespaceWatcher.startWatchingNamespace(k.podEventHandler, k.networkPolicyEventHandler)
-			k.routineCount += 3
-			k.cache.activateNamespaceWatcher(namespace.Name, namespaceWatcher)
+		if k.cache.namespaceStatus(namespace.GetName()) {
+			// Namespace already activated
+			glog.V(2).Infof("Namespace %s Added. already active", namespace.Name)
+			return nil
 		}
+		if !NamespacePolicyActivated(namespace) {
+			// Namespace doesn't have NetworkPolicies activated
+			glog.V(2).Infof("Namespace %s Added. doesn't have NetworkPolicies support. Not activating", namespace.Name)
+			return nil
+		}
+		glog.V(2).Infof("Namespace %s Added. Activating", namespace.Name)
+		return k.activateNamespace(namespace)
+
 	case watch.Deleted:
 		if k.cache.namespaceStatus(namespace.GetName()) {
-			glog.V(2).Infof("Deactivating namespace %s ", namespace.GetName())
-			k.routineCount -= 3
-			k.cache.deactivateNamespaceWatcher(namespace.GetName())
-			glog.V(2).Infof("%d go routine running ", k.routineCount)
-
+			glog.V(2).Infof("Namespace %s Deleted. Deactivating", namespace.Name)
+			return k.deactivateNamespace(namespace)
 		}
+
+	case watch.Modified:
+		if NamespacePolicyActivated(namespace) {
+			if k.cache.namespaceStatus(namespace.GetName()) {
+				glog.V(2).Infof("Namespace %s Modified. already active", namespace.Name)
+				return nil
+			}
+			glog.V(2).Infof("Namespace %s Modified. Activating", namespace.Name)
+			return k.activateNamespace(namespace)
+		}
+
+		if k.cache.namespaceStatus(namespace.Name) {
+			glog.V(2).Infof("Namespace %s Modified. Deactivating", namespace.Name)
+			return k.deactivateNamespace(namespace)
+		}
+		glog.V(2).Infof("Namespace %s Modified. doesn't have NetworkPolicies support. Not activating", namespace.Name)
 	}
 	return nil
 }
@@ -257,16 +304,18 @@ func (k *KubernetesPolicy) updateNamespacePolicy(namespace *api.Namespace, event
 // Namespace, Pod and networkPolicy changes
 func (k *KubernetesPolicy) Start() {
 
+	// Start by checking all existing namespaces to see which one got activated.
 	if err := k.namespaceSync(); err != nil {
 		glog.V(2).Infof("Error Syncing namespaces %s", err)
 	}
+
+	// Continue to watch for Namespaces changes.
 	// resultChan holds all the Kubernetes namespaces events.
 	resultNamespaceChan := make(chan watch.Event)
 	k.stopNamespaceChan = make(chan bool)
 	go k.kubernetes.NamespaceWatcher(resultNamespaceChan, k.stopNamespaceChan)
-	k.routineCount++
 
-	// Process all the queued events.
+	// Process the new Namespace events.
 	k.stopAll = make(chan bool)
 	k.processNamespacesEvent(resultNamespaceChan, k.stopAll)
 }

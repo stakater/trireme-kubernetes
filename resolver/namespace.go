@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"fmt"
+
 	"github.com/aporeto-inc/kubernetes-integration/kubernetes"
 	"github.com/golang/glog"
 	"k8s.io/kubernetes/pkg/api"
@@ -62,4 +64,18 @@ func (n *NamespaceWatcher) startWatchingNamespace(
 		}
 
 	}
+}
+
+// syncNamespace will sync all the pods on this namespace.
+func (n *NamespaceWatcher) syncNamespace(client *kubernetes.Client, updatePod func(*api.Pod) error) error {
+	localNamespacePods, err := client.LocalPods(n.namespace)
+	if err != nil {
+		return fmt.Errorf("Cannot get local Pods for Namespace %s: %s", n.namespace, err)
+	}
+	for _, pod := range localNamespacePods.Items {
+		if updatePod(&pod) != nil {
+			fmt.Printf("Sync of Pod %s in namespace %s failed: %s", pod.Name, pod.Namespace, err)
+		}
+	}
+	return nil
 }
