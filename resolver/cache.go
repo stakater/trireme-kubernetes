@@ -9,7 +9,7 @@ import (
 // Cache keeps all the state needed for the integration.
 type Cache struct {
 	// namespaceActivation
-	namespaceActivation map[string]bool
+	namespaceActivation map[string]*NamespaceWatcher
 	// podCache keeps a mapping between a POD name and the corresponding contextID
 	contextIDCache map[string]string
 	// cache keeps a cache of the contextID to the podCacheEntry object
@@ -26,7 +26,7 @@ type podCacheEntry struct {
 
 func newCache() *Cache {
 	return &Cache{
-		namespaceActivation: map[string]bool{},
+		namespaceActivation: map[string]*NamespaceWatcher{},
 		contextIDCache:      map[string]string{},
 		podEntryCache:       map[string]*podCacheEntry{},
 	}
@@ -98,4 +98,31 @@ func (c *Cache) deletePodFromCacheByContextID(contextID string) error {
 	delete(c.contextIDCache, kubeIdentifier)
 	delete(c.podEntryCache, contextID)
 	return nil
+}
+
+func (c *Cache) getNamespaceWatcher(namespace string) (*NamespaceWatcher, bool) {
+	namespaceWatcher, ok := c.namespaceActivation[namespace]
+	return namespaceWatcher, ok
+}
+
+func (c *Cache) activateNamespaceWatcher(namespace string, namespaceWatcher *NamespaceWatcher) {
+	c.namespaceActivation[namespace] = namespaceWatcher
+}
+
+func (c *Cache) deactivateNamespaceWatcher(namespace string) {
+	namespaceWatcher, ok := c.namespaceActivation[namespace]
+	if !ok {
+		return
+	}
+	namespaceWatcher.podStopChan <- true
+	namespaceWatcher.policyStopChan <- true
+	delete(c.namespaceActivation, namespace)
+}
+
+func (c *Cache) namespaceStatus(namespace string) bool {
+	_, ok := c.namespaceActivation[namespace]
+	if !ok {
+		return false
+	}
+	return true
 }
