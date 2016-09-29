@@ -41,7 +41,7 @@ func main() {
 	}
 
 	// Register the PolicyEngine to the Monitor
-	isolator := trireme.NewIsolator(networks, kubernetesPolicy, nil)
+	isolator := trireme.NewPSKIsolator("Kubernetes", networks, kubernetesPolicy, nil, []byte("SharedKey"))
 
 	// Register the Isolator to KubernetesPolicy for UpdatePolicies callback
 	kubernetesPolicy.RegisterIsolator(isolator)

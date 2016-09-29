@@ -7,7 +7,6 @@ import (
 
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme/datapath"
-	"github.com/aporeto-inc/trireme/datapath/lookup"
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/docker/docker/api/types"
 	"github.com/golang/glog"
@@ -68,7 +67,6 @@ func (k *KubernetesPolicy) RegisterIsolator(isolator trireme.Isolator) {
 // of IngressRules coming from Kubernetes
 func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.NetworkPolicyIngressRule) error {
 	//TODO: Temp hack to temporary create new rules:
-	req.Policy.Rules = lookup.NewRuleDB()
 
 	for _, rule := range *allRules {
 		for _, from := range rule.From {
@@ -77,7 +75,19 @@ func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.Net
 				return err
 			}
 			for key, value := range labelsKeyValue {
-				req.Policy.Rules.AddElements([]string{key + "=" + value}, "accept")
+				kv := policy.KeyValueOperator{
+					Key:      key,
+					Value:    value,
+					Operator: policy.Equal,
+				}
+
+				clause := []policy.KeyValueOperator{kv}
+
+				selector := policy.TagSelectorInfo{
+					Clause: clause,
+					Action: policy.Accept,
+				}
+				req.Policy.Rules = append(req.Policy.Rules, selector)
 			}
 		}
 	}
