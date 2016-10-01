@@ -12,7 +12,6 @@ import (
 	"github.com/golang/glog"
 
 	"k8s.io/kubernetes/pkg/api"
-	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/apis/extensions"
 	"k8s.io/kubernetes/pkg/watch"
 )
@@ -63,33 +62,15 @@ func (k *KubernetesPolicy) RegisterIsolator(isolator trireme.Isolator) {
 	k.isolator = isolator
 }
 
-// createIndividualRules populate the RuleDB of a Container based on the list of
+// createIndividualRules populate the RuleDB of a Container based on the list
 // of IngressRules coming from Kubernetes
-func createIndividualRules(req *policy.ContainerInfo, allRules *[]extensions.NetworkPolicyIngressRule) error {
+func createPolicyRules(req *policy.ContainerInfo, allRules *[]extensions.NetworkPolicyIngressRule) error {
 	//TODO: Temp hack to temporary create new rules:
 
 	for _, rule := range *allRules {
-		for _, from := range rule.From {
-			labelsKeyValue, err := apiu.LabelSelectorAsMap(from.PodSelector)
-			if err != nil {
-				return err
-			}
-			for key, value := range labelsKeyValue {
-				kv := policy.KeyValueOperator{
-					Key:      key,
-					Value:    value,
-					Operator: policy.Equal,
-				}
+		// Treating indiividual rules
+		indivualRule(req, &rule)
 
-				clause := []policy.KeyValueOperator{kv}
-
-				selector := policy.TagSelectorInfo{
-					Clause: clause,
-					Action: policy.Accept,
-				}
-				req.Policy.Rules = append(req.Policy.Rules, selector)
-			}
-		}
 	}
 	return nil
 }
