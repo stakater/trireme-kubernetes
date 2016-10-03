@@ -22,18 +22,34 @@ func clauseIn(requirement labels.Requirement) []policy.KeyValueOperator {
 }
 
 func clauseNotIn(requirement labels.Requirement) []policy.KeyValueOperator {
-	return nil
-
+	kvos := []policy.KeyValueOperator{}
+	for _, value := range requirement.Values().List() {
+		kvo := policy.KeyValueOperator{
+			Key:      requirement.Key(),
+			Operator: policy.NotEqual,
+			Value:    value,
+		}
+		kvos = append(kvos, kvo)
+	}
+	return kvos
 }
 
 func clauseExists(requirement labels.Requirement) []policy.KeyValueOperator {
-	return nil
-
+	kvo := policy.KeyValueOperator{
+		Key:      requirement.Key(),
+		Operator: policy.Equal,
+		Value:    "*",
+	}
+	return []policy.KeyValueOperator{kvo}
 }
 
 func clauseDoesNotExist(requirement labels.Requirement) []policy.KeyValueOperator {
-	return nil
-
+	kvo := policy.KeyValueOperator{
+		Key:      requirement.Key(),
+		Operator: policy.NotEqual,
+		Value:    "*",
+	}
+	return []policy.KeyValueOperator{kvo}
 }
 
 // generatePortTags generates all the
