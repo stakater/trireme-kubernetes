@@ -7,23 +7,28 @@ import (
 	"k8s.io/kubernetes/pkg/selection"
 )
 
-func clauseEqual(requirement labels.Requirement) policy.clause {
+func clauseEqual(requirement labels.Requirement) []policy.KeyValueOperator {
+	kvo := policy.KeyValueOperator{
+		Key:      requirement.Key(),
+		Operator: policy.Equal,
+		Value:    requirement.Values().List()[0],
+	}
+	return []policy.KeyValueOperator{kvo}
+}
+
+func clauseIn(requirement labels.Requirement) []policy.KeyValueOperator {
 
 }
 
-func clauseIn(requirement labels.Requirement) policy.clause {
+func clauseNotIn(requirement labels.Requirement) []policy.KeyValueOperator {
 
 }
 
-func clauseNotIn(requirement labels.Requirement) policy.clause {
+func clauseExists(requirement labels.Requirement) []policy.KeyValueOperator {
 
 }
 
-func clauseExists(requirement labels.Requirement) policy.clause {
-
-}
-
-func clauseDoesNotExist(requirement labels.Requirement) policy.clause {
+func clauseDoesNotExist(requirement labels.Requirement) []policy.KeyValueOperator {
 
 }
 
