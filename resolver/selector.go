@@ -1,9 +1,8 @@
 package resolver
 
 import (
-	"fmt"
-
 	"github.com/aporeto-inc/trireme/policy"
+	"github.com/golang/glog"
 	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/apis/extensions"
 	"k8s.io/kubernetes/pkg/labels"
@@ -81,7 +80,7 @@ func generatePortTags(ports []extensions.NetworkPolicyPort) []policy.KeyValueOpe
 	}
 	kvo := policy.KeyValueOperator{
 		Key:      "@port",
-		Operator: policy.ANY,
+		Operator: policy.Equal,
 		Value:    portList,
 	}
 	return []policy.KeyValueOperator{kvo}
@@ -139,9 +138,9 @@ func individualRule(req *policy.ContainerInfo, rule *extensions.NetworkPolicyIng
 }
 
 func printRules(req *policy.ContainerInfo) {
-	for _, selector := range req.Policy.Rules {
+	for i, selector := range req.Policy.Rules {
 		for _, clause := range selector.Clause {
-			fmt.Printf("%+v\n", clause)
+			glog.V(2).Infof("Trireme policy for container %s : Selector %s : %+v ", req.RunTime.Name, i, clause)
 		}
 	}
 }

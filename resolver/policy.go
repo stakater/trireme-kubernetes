@@ -72,6 +72,7 @@ func createPolicyRules(req *policy.ContainerInfo, allRules *[]extensions.Network
 		individualRule(req, &rule)
 
 	}
+	printRules(req)
 	return nil
 }
 
