@@ -140,7 +140,7 @@ func individualRule(req *policy.ContainerInfo, rule *extensions.NetworkPolicyIng
 func printRules(req *policy.ContainerInfo) {
 	for i, selector := range req.Policy.Rules {
 		for _, clause := range selector.Clause {
-			glog.V(2).Infof("Trireme policy for container %s : Selector %s : %+v ", req.RunTime.Name, i, clause)
+			glog.V(2).Infof("Trireme policy for container %s : Selector %d : %+v ", req.RunTime.Name, i, clause)
 		}
 	}
 }
