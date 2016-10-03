@@ -10,57 +10,63 @@ import (
 )
 
 func clauseEquals(requirement labels.Requirement) []policy.KeyValueOperator {
-	kvo := policy.KeyValueOperator{
-		Key:      requirement.Key(),
-		Operator: policy.Equal,
-		Value:    requirement.Values().List(),
+	return []policy.KeyValueOperator{
+		policy.KeyValueOperator{
+			Key:      requirement.Key(),
+			Operator: policy.Equal,
+			Value:    requirement.Values().List(),
+		},
 	}
-	return []policy.KeyValueOperator{kvo}
 }
 
 func clauseNotEquals(requirement labels.Requirement) []policy.KeyValueOperator {
-	kvo := policy.KeyValueOperator{
-		Key:      requirement.Key(),
-		Operator: policy.NotEqual,
-		Value:    requirement.Values().List(),
+	return []policy.KeyValueOperator{
+		policy.KeyValueOperator{
+			Key:      requirement.Key(),
+			Operator: policy.NotEqual,
+			Value:    requirement.Values().List(),
+		},
 	}
-	return []policy.KeyValueOperator{kvo}
 }
 
 func clauseIn(requirement labels.Requirement) []policy.KeyValueOperator {
-	kvo := policy.KeyValueOperator{
-		Key:      requirement.Key(),
-		Operator: policy.Equal,
-		Value:    requirement.Values().List(),
+	return []policy.KeyValueOperator{
+		policy.KeyValueOperator{
+			Key:      requirement.Key(),
+			Operator: policy.Equal,
+			Value:    requirement.Values().List(),
+		},
 	}
-	return []policy.KeyValueOperator{kvo}
 }
 
 func clauseNotIn(requirement labels.Requirement) []policy.KeyValueOperator {
-	kvo := policy.KeyValueOperator{
-		Key:      requirement.Key(),
-		Operator: policy.NotEqual,
-		Value:    requirement.Values().List(),
+	return []policy.KeyValueOperator{
+		policy.KeyValueOperator{
+			Key:      requirement.Key(),
+			Operator: policy.NotEqual,
+			Value:    requirement.Values().List(),
+		},
 	}
-	return []policy.KeyValueOperator{kvo}
 }
 
 func clauseExists(requirement labels.Requirement) []policy.KeyValueOperator {
-	kvo := policy.KeyValueOperator{
-		Key:      requirement.Key(),
-		Operator: policy.ANY,
-		Value:    []string{"*"},
+	return []policy.KeyValueOperator{
+		policy.KeyValueOperator{
+			Key:      requirement.Key(),
+			Operator: policy.ANY,
+			Value:    []string{"*"},
+		},
 	}
-	return []policy.KeyValueOperator{kvo}
 }
 
 func clauseDoesNotExist(requirement labels.Requirement) []policy.KeyValueOperator {
-	kvo := policy.KeyValueOperator{
-		Key:      requirement.Key(),
-		Operator: policy.ANY,
-		Value:    []string{"*"},
+	return []policy.KeyValueOperator{
+		policy.KeyValueOperator{
+			Key:      requirement.Key(),
+			Operator: policy.ANY,
+			Value:    []string{"*"},
+		},
 	}
-	return []policy.KeyValueOperator{kvo}
 }
 
 // generatePortTags generates all the clauses for the ports
@@ -137,7 +143,7 @@ func individualRule(req *policy.ContainerInfo, rule *extensions.NetworkPolicyIng
 	return nil
 }
 
-func printRules(req *policy.ContainerInfo) {
+func logRules(req *policy.ContainerInfo) {
 	for i, selector := range req.Policy.Rules {
 		for _, clause := range selector.Clause {
 			glog.V(2).Infof("Trireme policy for container %s : Selector %d : %+v ", req.RunTime.Name, i, clause)

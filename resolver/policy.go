@@ -64,15 +64,15 @@ func (k *KubernetesPolicy) RegisterIsolator(isolator trireme.Isolator) {
 
 // createIndividualRules populate the RuleDB of a Container based on the list
 // of IngressRules coming from Kubernetes
-func createPolicyRules(req *policy.ContainerInfo, allRules *[]extensions.NetworkPolicyIngressRule) error {
-	//TODO: Temp hack to temporary create new rules:
+func createPolicyRules(req *policy.ContainerInfo, rules *[]extensions.NetworkPolicyIngressRule) error {
+	//TODO: Hack to make sure that all Trireme Rules are wiped out before adding new ones.
+	req.Policy.Rules = []policy.TagSelectorInfo{}
 
-	for _, rule := range *allRules {
-		// Treating indiividual rules
+	for _, rule := range *rules {
+		// Populate the clauses related to each individual rules.
 		individualRule(req, &rule)
-
 	}
-	printRules(req)
+	logRules(req)
 	return nil
 }
 
