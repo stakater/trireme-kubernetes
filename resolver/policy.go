@@ -69,7 +69,7 @@ func createPolicyRules(req *policy.ContainerInfo, allRules *[]extensions.Network
 
 	for _, rule := range *allRules {
 		// Treating indiividual rules
-		indivualRule(req, &rule)
+		individualRule(req, &rule)
 
 	}
 	return nil
@@ -102,7 +102,7 @@ func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy 
 	}
 
 	// Step2: Translate all the metadata labels to Trireme Rules
-	if err := createIndividualRules(containerPolicy, allRules); err != nil {
+	if err := createPolicyRules(containerPolicy, allRules); err != nil {
 		return err
 	}
 
