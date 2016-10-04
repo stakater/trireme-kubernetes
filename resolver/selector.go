@@ -53,7 +53,7 @@ func clauseExists(requirement labels.Requirement) []policy.KeyValueOperator {
 	return []policy.KeyValueOperator{
 		policy.KeyValueOperator{
 			Key:      requirement.Key(),
-			Operator: policy.ANY,
+			Operator: policy.KeyExists,
 			Value:    []string{"*"},
 		},
 	}
@@ -63,7 +63,7 @@ func clauseDoesNotExist(requirement labels.Requirement) []policy.KeyValueOperato
 	return []policy.KeyValueOperator{
 		policy.KeyValueOperator{
 			Key:      requirement.Key(),
-			Operator: policy.ANY,
+			Operator: policy.KeyNotExists,
 			Value:    []string{"*"},
 		},
 	}
