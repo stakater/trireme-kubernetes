@@ -21,9 +21,14 @@ type Client struct {
 // NewClient Generate and initialize a Trireme Client object
 func NewClient(kubeconfig string, namespace string) (*Client, error) {
 	Client := &Client{}
-	err := Client.InitKubernetesClient(kubeconfig)
+	var err error
+	if kubeconfig == "" {
+		err = Client.InitInClusterKubernetesClient()
+	} else {
+		err = Client.InitKubernetesClient(kubeconfig)
+	}
 	if err != nil {
-		return nil, fmt.Errorf("Coultn't initialize Kubernetes Client: %v", err)
+		return nil, fmt.Errorf("Couldn't initialize Kubernetes Client: %v", err)
 	}
 	return Client, nil
 }
@@ -39,6 +44,16 @@ func (c *Client) InitKubernetesClient(kubeconfig string) error {
 	myClient, err := client.New(config)
 	if err != nil {
 		return fmt.Errorf("Error creating REST Kube Client: %v", err)
+	}
+	c.kubeClient = myClient
+	return nil
+}
+
+// InitInClusterKubernetesClient setup the client to use a InCluster authentication.
+func (c *Client) InitInClusterKubernetesClient() error {
+	myClient, err := client.NewInCluster()
+	if err != nil {
+		return fmt.Errorf("Error creating in cluster REST Kube Client: %v", err)
 	}
 	c.kubeClient = myClient
 	return nil

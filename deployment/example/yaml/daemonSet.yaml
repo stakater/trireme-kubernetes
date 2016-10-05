@@ -1,0 +1,16 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: aporeto
+  name: trireme
+spec:
+  template:
+    metadata:
+      labels:
+        app: trireme
+    spec:
+      containers:
+        -  name: trireme
+           image: kubernetes-trireme
+           

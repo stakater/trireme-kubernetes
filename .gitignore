@@ -1,0 +1,4 @@
+.DS_Store
+docker/app
+kubernetes-integration
+testresults.xml

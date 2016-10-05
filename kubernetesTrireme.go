@@ -1,9 +1,5 @@
 package main
 
-// This has to be refactored soon enough. For now, just using a simple
-// Proof of concept of an example Kubernetes integration.
-// This is based on the original example code from trireme/example/example.go
-
 import (
 	"flag"
 	"fmt"
@@ -32,7 +28,8 @@ func main() {
 	networks := []string{"0.0.0.0/0"}
 	// Get location of the Kubeconfig file. By default in your home.
 	// TODO: Change the way the Kuebrnetes config get loaded
-	kubeconfig := os.Getenv("HOME") + "/.kube/config"
+	//kubeconfig := os.Getenv("HOME") + "/.kube/config"
+	kubeconfig := ""
 	namespace := "default"
 	// Create New PolicyEngine for Kubernetes
 	kubernetesPolicy, err := resolver.NewKubernetesPolicy(kubeconfig, namespace)
