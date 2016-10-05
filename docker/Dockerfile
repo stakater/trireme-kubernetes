@@ -1,7 +1,7 @@
 FROM alpine
 MAINTAINER Antoine Mercadal <antoine@aporeto.com>
 
-ADD app /opt/kubernetes-integration/
+ADD kubernetes-integration /opt/kubernetes-integration/
 ADD run.sh /opt/kubernetes-integration/run.sh
 
 RUN mkdir -p /opt/kubernetes-integration
