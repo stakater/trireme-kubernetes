@@ -10,6 +10,7 @@ spec:
       labels:
         app: trireme
     spec:
+      hostNetwork: true
       containers:
         -  name: trireme
            image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/kubernetes-integration
