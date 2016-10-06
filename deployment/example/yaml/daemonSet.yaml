@@ -12,5 +12,15 @@ spec:
     spec:
       containers:
         -  name: trireme
-           image: kubernetes-trireme
-           
+           image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/kubernetes-integration
+           securityContext:
+             privileged: true
+           volumeMounts:
+             - mountPath: /var/run/docker.sock
+               name: dockersock
+               readOnly: false
+
+      volumes:
+        - name: dockersock
+          hostPath:
+            path: /var/run/docker.sock
