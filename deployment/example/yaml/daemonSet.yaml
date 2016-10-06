@@ -12,7 +12,7 @@ spec:
     spec:
       containers:
         -  name: trireme
-           image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/kubernetes-integration
+           image: 26088932149.dkr.ecr.us-west-2.amazonaws.com/bernardtest:123
            securityContext:
              privileged: true
            volumeMounts:
