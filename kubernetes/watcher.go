@@ -84,3 +84,28 @@ func (c *Client) NamespaceWatcher(resultChan chan<- watch.Event, stopChan <-chan
 		}
 	}
 }
+
+// NodeWatcher watches new node
+func (c *Client) NodeWatcher(resultChan chan<- watch.Event, stopChan <-chan bool) error {
+	for {
+		watcher, err := c.kubeClient.Nodes().Watch(api.ListOptions{})
+		if err != nil {
+			glog.V(4).Infof("Couldn't open the Node watch channel: %s", err)
+			return fmt.Errorf("Couldn't open the Node watch channel: %s", err)
+		}
+	Watch:
+		for {
+			select {
+			case <-stopChan:
+				return nil
+			case req, open := <-watcher.ResultChan():
+				if !open {
+					glog.V(2).Infof("NodeWatcher channel closed.")
+					break Watch
+				}
+				glog.V(4).Infof("Adding NodeEvent")
+				resultChan <- req
+			}
+		}
+	}
+}
