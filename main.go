@@ -16,6 +16,9 @@ import (
 // DefaultTriremePSK is used fas the default PSK for trireme if not overriden by the user.
 const DefaultTriremePSK = "Trireme"
 
+// KubeConfigLocation is the default location of the KubeConfig file.
+const KubeConfigLocation = "/.kube/config"
+
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: example -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n")
 	flag.PrintDefaults()
@@ -32,9 +35,15 @@ func init() {
 func main() {
 	var wg sync.WaitGroup
 	networks := []string{"0.0.0.0/0"}
+
+	// Check if running inside a PoD
 	// Get location of the Kubeconfig file. By default in your home.
-	// TODO: Change the way the Kuebrnetes config get loaded
-	kubeconfig := os.Getenv("HOME") + "/.kube/config"
+	var kubeconfig string
+	if os.Getenv("KUBERNETES_PORT") == "" {
+		kubeconfig = os.Getenv("HOME") + KubeConfigLocation
+	} else {
+		kubeconfig = ""
+	}
 	namespace := "default"
 	// Create New PolicyEngine for Kubernetes
 	kubernetesPolicy, err := resolver.NewKubernetesPolicy(kubeconfig, namespace)
