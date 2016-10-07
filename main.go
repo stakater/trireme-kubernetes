@@ -54,7 +54,7 @@ func main() {
 	// Naive implementation for PKI:
 	// Trying to load the PKI infra from Kube Secret.
 	// If successful, use it, if not, revert to SharedSecret.
-	pki, err := auth.LoadPKIFromKubeSecret()
+	pki, err := auth.LoadPKI()
 	var isolator trireme.Isolator
 	if err != nil {
 		glog.V(2).Infof("Error reading KubeSecret: %s . Falling back to PSK", err)
