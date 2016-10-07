@@ -10,6 +10,7 @@ import (
 	"github.com/aporeto-inc/kubernetes-integration/auth"
 	"github.com/aporeto-inc/kubernetes-integration/resolver"
 	"github.com/aporeto-inc/trireme"
+	"github.com/golang/glog"
 )
 
 // DefaultTriremePSK is used fas the default PSK for trireme if not overriden by the user.
@@ -47,6 +48,7 @@ func main() {
 	pki, err := auth.LoadPKIFromKubeSecret()
 	var isolator trireme.Isolator
 	if err != nil {
+		glog.V(2).Infof("Error reading KubeSecret: %s . Falling back to PSK", err)
 		isolator = trireme.NewPSKIsolator("Kubernetes", networks, kubernetesPolicy, nil, []byte(DefaultTriremePSK))
 	} else {
 		certCache := map[string]*ecdsa.PublicKey{}

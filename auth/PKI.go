@@ -28,15 +28,15 @@ type PKI struct {
 func LoadPKIFromKubeSecret() (*PKI, error) {
 	keyPEM, err := ioutil.ReadFile(SecretDirectory + KeyPEMFile)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't read KeyPEMFile")
+		return nil, fmt.Errorf("Couldn't read KeyPEMFile: %s", err)
 	}
 	certPEM, err := ioutil.ReadFile(SecretDirectory + CertPEMFile)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't read CertPEMFile")
+		return nil, fmt.Errorf("Couldn't read CertPEMFile: %s", err)
 	}
 	caCertPEM, err := ioutil.ReadFile(SecretDirectory + CaCertPEMFile)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't read CaCertPEMFile")
+		return nil, fmt.Errorf("Couldn't read CaCertPEMFile %s", err)
 	}
 
 	return &PKI{
