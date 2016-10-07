@@ -28,8 +28,7 @@ func main() {
 	networks := []string{"0.0.0.0/0"}
 	// Get location of the Kubeconfig file. By default in your home.
 	// TODO: Change the way the Kuebrnetes config get loaded
-	//kubeconfig := os.Getenv("HOME") + "/.kube/config"
-	kubeconfig := ""
+	kubeconfig := os.Getenv("HOME") + "/.kube/config"
 	namespace := "default"
 	// Create New PolicyEngine for Kubernetes
 	kubernetesPolicy, err := resolver.NewKubernetesPolicy(kubeconfig, namespace)
@@ -38,6 +37,7 @@ func main() {
 	}
 
 	// Register the PolicyEngine to the Monitor
+	// TODO: get certificate
 	isolator := trireme.NewPSKIsolator("Kubernetes", networks, kubernetesPolicy, nil, []byte("SharedKey"))
 
 	// Register the Isolator to KubernetesPolicy for UpdatePolicies callback
