@@ -14,6 +14,9 @@ spec:
       containers:
         -  name: trireme
            image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/kubernetes-integration
+           env:
+             - name: TRIREME_PKI
+               value: /var/trireme/
            securityContext:
              privileged: true
            volumeMounts:

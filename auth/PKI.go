@@ -3,10 +3,15 @@ package auth
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
-// SecretDirectory is the directory where the PEMs are mounted.
-const SecretDirectory = "/var/trireme/"
+// EnvDirectory is the env. variable name for the location of the directory where
+// the PKI files are expected to be found.
+const EnvDirectory = "TRIREME_PKI"
+
+// DefaultPKIDirectory is the directory where the PEMs are mounted.
+const DefaultPKIDirectory = "/var/trireme/"
 
 // KeyPEMFile is the name of the KeyPEMFile in the SecretDirectory directory.
 const KeyPEMFile = "key.pem"
@@ -24,17 +29,28 @@ type PKI struct {
 	CaCertPEM []byte
 }
 
-// LoadPKIFromKubeSecret Create a new PKISecret from Kube Secret.
-func LoadPKIFromKubeSecret() (*PKI, error) {
-	keyPEM, err := ioutil.ReadFile(SecretDirectory + KeyPEMFile)
+// LoadPKI loads the PKI files based on the following directory:
+// 1) Env Variable if set.
+// 2) Default (/var/trireme/) if not set.
+func LoadPKI() (*PKI, error) {
+	dir := os.Getenv(EnvDirectory)
+	if dir == "" {
+		dir = DefaultPKIDirectory
+	}
+	return LoadPKIFromDir(dir)
+}
+
+// LoadPKIFromDir Create a new PKISecret from Kube Secret.
+func LoadPKIFromDir(dir string) (*PKI, error) {
+	keyPEM, err := ioutil.ReadFile(dir + KeyPEMFile)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't read KeyPEMFile: %s", err)
 	}
-	certPEM, err := ioutil.ReadFile(SecretDirectory + CertPEMFile)
+	certPEM, err := ioutil.ReadFile(dir + CertPEMFile)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't read CertPEMFile: %s", err)
 	}
-	caCertPEM, err := ioutil.ReadFile(SecretDirectory + CaCertPEMFile)
+	caCertPEM, err := ioutil.ReadFile(dir + CaCertPEMFile)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't read CaCertPEMFile %s", err)
 	}
