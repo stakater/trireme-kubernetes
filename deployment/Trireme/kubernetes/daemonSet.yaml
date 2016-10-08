@@ -17,6 +17,8 @@ spec:
            env:
              - name: TRIREME_PKI
                value: /var/trireme/
+             - name: TRIREME_CERT
+               value: TRIREME
              - name: KUBERNETES_NODE
                valueFrom:
                  fieldRef:
