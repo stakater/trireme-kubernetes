@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/aporeto-inc/kubepox"
 
@@ -12,6 +13,9 @@ import (
 	"k8s.io/kubernetes/pkg/fields"
 )
 
+// EnvNodeName is the default env. name used for the Kubernetes node name.
+const EnvNodeName = "KUBERNETES_NODE"
+
 // Client is the Trireme representation of the Client.
 type Client struct {
 	kubeClient *client.Client
@@ -21,6 +25,7 @@ type Client struct {
 // NewClient Generate and initialize a Trireme Client object
 func NewClient(kubeconfig string, namespace string) (*Client, error) {
 	Client := &Client{}
+	Client.localNode = os.Getenv(EnvNodeName)
 	var err error
 	if kubeconfig == "" {
 		err = Client.InitInClusterKubernetesClient()
@@ -61,7 +66,7 @@ func (c *Client) InitInClusterKubernetesClient() error {
 
 func (c *Client) localNodeOption() api.ListOptions {
 	fs := fields.Set(map[string]string{
-		"spec.nodeName": "127.0.0.1",
+		"spec.nodeName": c.localNode,
 	})
 	option := api.ListOptions{
 		FieldSelector: fs.AsSelector(),
@@ -108,8 +113,8 @@ func (c *Client) AllNamespaces() (*api.NamespaceList, error) {
 	return c.kubeClient.Namespaces().List(api.ListOptions{})
 }
 
-// AddNodeAnnotation adds the annotationKey:annotationValue
-func (c *Client) AddNodeAnnotation(nodeName, annotationKey, annotationValue string) error {
+// AddLocalNodeAnnotation adds the annotationKey:annotationValue
+func (c *Client) AddLocalNodeAnnotation(nodeName, annotationKey, annotationValue string) error {
 	node, err := c.kubeClient.Nodes().Get(nodeName)
 	if err != nil {
 		return fmt.Errorf("Couldn't get node %s: %s", nodeName, err)
