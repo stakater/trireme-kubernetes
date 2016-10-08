@@ -17,6 +17,10 @@ spec:
            env:
              - name: TRIREME_PKI
                value: /var/trireme/
+             - name: KUBERNETES_NODE
+               valueFrom:
+                 fieldRef:
+                   fieldPath: spec.host
            securityContext:
              privileged: true
            volumeMounts:

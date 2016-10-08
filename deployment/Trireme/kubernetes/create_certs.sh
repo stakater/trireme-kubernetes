@@ -25,4 +25,4 @@ openssl x509 -req -SHA256 -days 3650 -in cert.csr -CA ca.crt -CAkey ca.key -CAcr
 /root/kubectl.sh create secret generic trireme-certs --from-file=./ca.crt --from-file=./key.pem --from-file=./cert.pem
 
 # Cleanup
-rm -rf ca.* cert.* key.*
+#rm -rf ca.* cert.* key.*

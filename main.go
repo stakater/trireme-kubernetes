@@ -27,8 +27,6 @@ func usage() {
 
 func init() {
 	flag.Usage = usage
-	// NOTE: This next line is key you have to call flag.Parse() for the command line
-	// options or "flags" that are defined in the glog module to be picked up.
 	flag.Parse()
 }
 
@@ -62,6 +60,7 @@ func main() {
 	} else {
 		certCache := map[string]*ecdsa.PublicKey{}
 		isolator = trireme.NewPKIIsolator("Kubernetes", networks, kubernetesPolicy, nil, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM, certCache)
+		auth.RegisterPKI(*kubernetesPolicy.Kubernetes, pki.CertPEM)
 	}
 
 	// Register the Isolator to KubernetesPolicy for UpdatePolicies callback

@@ -34,7 +34,7 @@ const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-poli
 // by Kubernetes NetworkPolicy API.
 type KubernetesPolicy struct {
 	isolator          trireme.Isolator
-	kubernetes        *kubernetes.Client
+	Kubernetes        *kubernetes.Client
 	cache             *Cache
 	stopAll           chan bool
 	stopNamespaceChan chan bool
@@ -50,7 +50,7 @@ func NewKubernetesPolicy(kubeconfig string, namespace string) (*KubernetesPolicy
 
 	return &KubernetesPolicy{
 		cache:        newCache(),
-		kubernetes:   client,
+		Kubernetes:   client,
 		routineCount: 0,
 	}, nil
 }
@@ -97,7 +97,7 @@ func (k *KubernetesPolicy) GetContainerPolicy(contextID string, containerPolicy 
 		return nil
 	}
 
-	allRules, err := k.kubernetes.PodRules(cacheEntry.podName, cacheEntry.podNamespace)
+	allRules, err := k.Kubernetes.PodRules(cacheEntry.podName, cacheEntry.podNamespace)
 	if err != nil {
 		return fmt.Errorf("Couldn't get the NetworkPolicies for Pod %s : %s", cacheEntry.podName, err)
 	}
@@ -172,7 +172,7 @@ func (k *KubernetesPolicy) MetadataExtractor(info *types.ContainerJSON) (string,
 
 	// Adding all the specific Kubernetes K,V from the Pod.
 	// Iterate on PodLabels and add them as tags
-	podLabels, err := k.kubernetes.PodLabels(info.Config.Labels[KubernetesPodName], info.Config.Labels[KubernetesPodNamespace])
+	podLabels, err := k.Kubernetes.PodLabels(info.Config.Labels[KubernetesPodName], info.Config.Labels[KubernetesPodNamespace])
 	if err != nil {
 		return "", nil, fmt.Errorf("Couldn't get Kubernetes labels for container %s : %v", containerName, err)
 	}
@@ -202,7 +202,7 @@ func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 }
 
 func (k *KubernetesPolicy) namespaceSync() error {
-	namespaces, err := k.kubernetes.AllNamespaces()
+	namespaces, err := k.Kubernetes.AllNamespaces()
 	if err != nil {
 		return fmt.Errorf("Couldn't get all namespaces %s ", err)
 	}
@@ -235,9 +235,9 @@ func NamespacePolicyActivated(namespace *api.Namespace) bool {
 
 func (k *KubernetesPolicy) activateNamespace(namespace *api.Namespace) error {
 	glog.V(2).Infof("Activating namespace %s ", namespace.Name)
-	namespaceWatcher := NewNamespaceWatcher(k.kubernetes, namespace.Name)
+	namespaceWatcher := NewNamespaceWatcher(k.Kubernetes, namespace.Name)
 	// SyncExistingPods on Namespace
-	namespaceWatcher.syncNamespace(k.kubernetes, k.updatePodPolicy)
+	namespaceWatcher.syncNamespace(k.Kubernetes, k.updatePodPolicy)
 	// Start watching new POD/Policy events.
 	go namespaceWatcher.startWatchingNamespace(k.podEventHandler, k.networkPolicyEventHandler)
 	k.cache.activateNamespaceWatcher(namespace.Name, namespaceWatcher)
@@ -307,7 +307,7 @@ func (k *KubernetesPolicy) Start() {
 	// resultChan holds all the Kubernetes namespaces events.
 	resultNamespaceChan := make(chan watch.Event)
 	k.stopNamespaceChan = make(chan bool)
-	go k.kubernetes.NamespaceWatcher(resultNamespaceChan, k.stopNamespaceChan)
+	go k.Kubernetes.NamespaceWatcher(resultNamespaceChan, k.stopNamespaceChan)
 
 	// Process the new Namespace events.
 	k.stopAll = make(chan bool)

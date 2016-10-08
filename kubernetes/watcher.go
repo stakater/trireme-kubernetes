@@ -85,7 +85,7 @@ func (c *Client) NamespaceWatcher(resultChan chan<- watch.Event, stopChan <-chan
 	}
 }
 
-// NodeWatcher watches new node
+// NodeWatcher watches new nodes and send node events on the resultChan
 func (c *Client) NodeWatcher(resultChan chan<- watch.Event, stopChan <-chan bool) error {
 	for {
 		watcher, err := c.kubeClient.Nodes().Watch(api.ListOptions{})

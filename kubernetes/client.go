@@ -107,3 +107,20 @@ func (c *Client) LocalPods(namespace string) (*api.PodList, error) {
 func (c *Client) AllNamespaces() (*api.NamespaceList, error) {
 	return c.kubeClient.Namespaces().List(api.ListOptions{})
 }
+
+// AddNodeAnnotation adds the annotationKey:annotationValue
+func (c *Client) AddNodeAnnotation(nodeName, annotationKey, annotationValue string) error {
+	node, err := c.kubeClient.Nodes().Get(nodeName)
+	if err != nil {
+		return fmt.Errorf("Couldn't get node %s: %s", nodeName, err)
+	}
+
+	annotations := node.GetAnnotations()
+	annotations[annotationKey] = annotationValue
+	node.SetAnnotations(annotations)
+	_, err = c.kubeClient.Nodes().Update(node)
+	if err != nil {
+		return fmt.Errorf("Error updating Annotations for node %s: %s", nodeName, err)
+	}
+	return nil
+}
