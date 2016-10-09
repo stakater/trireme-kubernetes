@@ -8,7 +8,7 @@ const NodeAnnotationKey = "TRIREME_CERT"
 
 // RegisterPKI registers the Cert of this node as an annotation on the KubeAPI.
 func RegisterPKI(client kubernetes.Client, cert []byte) {
-	client.AddLocalNodeAnnotation(NodeAnnotationKey, certToString(cert), "DummyStringForNow")
+	client.AddLocalNodeAnnotation("SomeNode", NodeAnnotationKey, certToString(cert))
 }
 
 func certToString(cert []byte) string {
