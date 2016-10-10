@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/ecdsa"
 	"flag"
 	"fmt"
 	"os"
@@ -18,6 +17,9 @@ const DefaultTriremePSK = "Trireme"
 
 // KubeConfigLocation is the default location of the KubeConfig file.
 const KubeConfigLocation = "/.kube/config"
+
+// EnvNodeName is the default env. name used for the Kubernetes node name.
+const EnvNodeName = "KUBERNETES_NODE"
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: example -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n")
@@ -42,9 +44,10 @@ func main() {
 	} else {
 		kubeconfig = ""
 	}
+	nodeName := os.Getenv(EnvNodeName)
 	namespace := "default"
 	// Create New PolicyEngine for Kubernetes
-	kubernetesPolicy, err := resolver.NewKubernetesPolicy(kubeconfig, namespace)
+	kubernetesPolicy, err := resolver.NewKubernetesPolicy(kubeconfig, namespace, nodeName)
 	if err != nil {
 		panic(err)
 	}
@@ -56,11 +59,14 @@ func main() {
 	var isolator trireme.Isolator
 	if err != nil {
 		glog.V(2).Infof("Error reading KubeSecret: %s . Falling back to PSK", err)
-		isolator = trireme.NewPSKIsolator("Kubernetes", networks, kubernetesPolicy, nil, []byte(DefaultTriremePSK))
+		isolator = trireme.NewPSKIsolator(nodeName, networks, kubernetesPolicy, nil, []byte(DefaultTriremePSK))
 	} else {
-		certCache := map[string]*ecdsa.PublicKey{}
-		isolator = trireme.NewPKIIsolator("Kubernetes", networks, kubernetesPolicy, nil, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM, certCache)
+
+		isolator = trireme.NewPKIIsolator(nodeName, networks, kubernetesPolicy, nil, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
 		auth.RegisterPKI(*kubernetesPolicy.Kubernetes, pki.CertPEM)
+		certs := auth.NewCertsWatcher(*kubernetesPolicy.Kubernetes, isolator)
+		certs.SyncNodeCerts(*kubernetesPolicy.Kubernetes)
+		go certs.StartWatchingCerts()
 	}
 
 	// Register the Isolator to KubernetesPolicy for UpdatePolicies callback
