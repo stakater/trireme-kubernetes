@@ -42,8 +42,8 @@ type KubernetesPolicy struct {
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
-func NewKubernetesPolicy(kubeconfig string, namespace string) (*KubernetesPolicy, error) {
-	client, err := kubernetes.NewClient(kubeconfig, namespace)
+func NewKubernetesPolicy(kubeconfig string, namespace string, nodename string) (*KubernetesPolicy, error) {
+	client, err := kubernetes.NewClient(kubeconfig, namespace, nodename)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't create KubernetesClient: %v ", err)
 	}
