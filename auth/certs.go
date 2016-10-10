@@ -98,5 +98,6 @@ func (c *Certs) SyncNodeCerts(client kubernetes.Client) error {
 }
 
 func (c *Certs) addCertToCache(nodeName string, cert []byte) {
+	glog.V(2).Infof("Adding cert for node: %s", nodeName)
 	c.isolator.AddHostSecret(nodeName, cert)
 }
