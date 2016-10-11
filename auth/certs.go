@@ -11,27 +11,25 @@ import (
 	"github.com/golang/glog"
 )
 
-// NodeAnnotationKey is the env variable used as a key for the annotation containing the
-// node cert.
-const NodeAnnotationKey = "TRIREME_CERT"
-
 // Certs is used to monitor the Certificate used all over the Kubernetes Cluster.
 type Certs struct {
-	isolator       trireme.Isolator
-	nodeResultChan chan watch.Event
-	nodeStopChan   chan bool
-	certStopChan   chan bool
+	isolator          trireme.Isolator
+	nodeResultChan    chan watch.Event
+	nodeStopChan      chan bool
+	certStopChan      chan bool
+	nodeAnnotationKey string
 }
 
 // NewCertsWatcher creates a new Certs object and start watching for changes and updates
 // on all the nodes on the Kube Cluster.
-func NewCertsWatcher(client kubernetes.Client, isolator trireme.Isolator) *Certs {
+func NewCertsWatcher(client kubernetes.Client, isolator trireme.Isolator, nodeAnnotationKey string) *Certs {
 	// Creating all the channels.
 	certs := &Certs{
-		isolator:       isolator,
-		nodeResultChan: make(chan watch.Event),
-		nodeStopChan:   make(chan bool),
-		certStopChan:   make(chan bool),
+		isolator:          isolator,
+		nodeResultChan:    make(chan watch.Event),
+		nodeStopChan:      make(chan bool),
+		certStopChan:      make(chan bool),
+		nodeAnnotationKey: nodeAnnotationKey,
 	}
 
 	// This will start to enqueue new Event nodes.
@@ -57,7 +55,7 @@ func (c *Certs) StartWatchingCerts() {
 // ProcessNodeUpdate is triggered when a new event is received.
 func (c *Certs) ProcessNodeUpdate(node *api.Node, eventType watch.EventType) {
 	annotations := node.GetAnnotations()
-	if cert, ok := annotations[NodeAnnotationKey]; ok {
+	if cert, ok := annotations[c.nodeAnnotationKey]; ok {
 		c.addCertToCache(node.GetName(), certStringToBytes(cert))
 	}
 }
@@ -69,8 +67,8 @@ func (c *Certs) StopWatchingCerts() {
 }
 
 // RegisterPKI registers the Cert of this node as an annotation on the KubeAPI.
-func RegisterPKI(client kubernetes.Client, cert []byte) {
-	client.AddLocalNodeAnnotation(NodeAnnotationKey, certBytesToString(cert))
+func (c *Certs) RegisterPKI(client kubernetes.Client, cert []byte) {
+	client.AddLocalNodeAnnotation(c.nodeAnnotationKey, certBytesToString(cert))
 }
 
 func certBytesToString(cert []byte) string {
@@ -90,7 +88,7 @@ func (c *Certs) SyncNodeCerts(client kubernetes.Client) error {
 	}
 	for _, node := range allNodes.Items {
 		annotations := node.GetAnnotations()
-		if cert, ok := annotations[NodeAnnotationKey]; ok {
+		if cert, ok := annotations[c.nodeAnnotationKey]; ok {
 			c.addCertToCache(node.GetName(), certStringToBytes(cert))
 		}
 	}

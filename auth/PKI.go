@@ -3,15 +3,7 @@ package auth
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 )
-
-// EnvDirectory is the env. variable name for the location of the directory where
-// the PKI files are expected to be found.
-const EnvDirectory = "TRIREME_PKI"
-
-// DefaultPKIDirectory is the directory where the PEMs are mounted.
-const DefaultPKIDirectory = "/var/trireme/"
 
 // KeyPEMFile is the name of the KeyPEMFile in the SecretDirectory directory.
 const KeyPEMFile = "key.pem"
@@ -29,19 +21,8 @@ type PKI struct {
 	CaCertPEM []byte
 }
 
-// LoadPKI loads the PKI files based on the following directory:
-// 1) Env Variable if set.
-// 2) Default (/var/trireme/) if not set.
-func LoadPKI() (*PKI, error) {
-	dir := os.Getenv(EnvDirectory)
-	if dir == "" {
-		dir = DefaultPKIDirectory
-	}
-	return LoadPKIFromDir(dir)
-}
-
-// LoadPKIFromDir Create a new PKISecret from Kube Secret.
-func LoadPKIFromDir(dir string) (*PKI, error) {
+// LoadPKI Create a new PKISecret from Kube Secret.
+func LoadPKI(dir string) (*PKI, error) {
 	keyPEM, err := ioutil.ReadFile(dir + KeyPEMFile)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't read KeyPEMFile: %s", err)
