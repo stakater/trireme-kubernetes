@@ -1,9 +1,6 @@
 package main
 
 import (
-	"flag"
-	"fmt"
-	"os"
 	"sync"
 
 	"github.com/aporeto-inc/kubernetes-integration/auth"
@@ -12,17 +9,6 @@ import (
 	"github.com/aporeto-inc/trireme"
 	"github.com/golang/glog"
 )
-
-func usage() {
-	fmt.Fprintf(os.Stderr, "usage: example -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n")
-	flag.PrintDefaults()
-	os.Exit(2)
-}
-
-func init() {
-	flag.Usage = usage
-	flag.Parse()
-}
 
 func main() {
 	var wg sync.WaitGroup

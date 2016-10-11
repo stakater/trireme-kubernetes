@@ -1,6 +1,10 @@
 package config
 
-import "os"
+import (
+	"flag"
+	"fmt"
+	"os"
+)
 
 // EnvNodeName is the default env. name used for the Kubernetes node name.
 const EnvNodeName = "KUBERNETES_NODE"
@@ -36,30 +40,58 @@ type TriKubeConfig struct {
 	TriremePSK         string
 }
 
+func usage() {
+	fmt.Fprintf(os.Stderr, "usage: example -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n")
+	flag.PrintDefaults()
+	os.Exit(2)
+}
+
 // LoadConfig loads config:
 // 1) If presents flags are used
 // 2) If no flags, Env Variables are used
 // 3) If no Env Variables, defaults are used when possible.
 func LoadConfig() *TriKubeConfig {
+
+	var flagNodeName = flag.String("node", "", "Node name in Kubernetes")
+	var flagNodeAnnotationKey = flag.String("annotation", "", "Trireme Node Annotation key in Kuebernetes")
+	var flagDefaultPKIDirectory = flag.String("pki", "", "Directory where the Trireme PKIs are")
+	var flagDefaultKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kuebrnetes")
+
+	flag.Usage = usage
+	flag.Parse()
+
 	config := &TriKubeConfig{}
+
 	if os.Getenv("KUBERNETES_PORT") == "" {
 		config.KubeEnv = false
-		config.KubeConfigLocation = os.Getenv("HOME") + KubeConfigLocation
+		config.KubeConfigLocation = *flagDefaultKubeConfigLocation
+		if config.KubeConfigLocation == "" {
+			config.KubeConfigLocation = os.Getenv("HOME") + KubeConfigLocation
+		}
 	} else {
 		config.KubeEnv = true
 	}
 
-	config.KubeNodeName = os.Getenv(EnvNodeName)
+	config.KubeNodeName = *flagNodeName
+	if config.KubeNodeName == "" {
+		config.KubeNodeName = os.Getenv(EnvNodeName)
+	}
 	if config.KubeNodeName == "" {
 		panic("Couldn't load NodeName")
 	}
 
-	config.NodeAnnotationKey = os.Getenv(EnvNodeAnnotationKey)
+	config.NodeAnnotationKey = *flagNodeAnnotationKey
+	if config.NodeAnnotationKey == "" {
+		config.NodeAnnotationKey = os.Getenv(EnvNodeAnnotationKey)
+	}
 	if config.NodeAnnotationKey == "" {
 		config.NodeAnnotationKey = DefaultNodeAnnotationKey
 	}
 
-	config.PKIDirectory = os.Getenv(EnvPKIDirectory)
+	config.PKIDirectory = *flagDefaultPKIDirectory
+	if config.PKIDirectory == "" {
+		config.PKIDirectory = os.Getenv(EnvPKIDirectory)
+	}
 	if config.PKIDirectory == "" {
 		config.PKIDirectory = DefaultPKIDirectory
 	}
