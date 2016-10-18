@@ -7,13 +7,13 @@ import (
 	"k8s.io/kubernetes/pkg/watch"
 
 	"github.com/aporeto-inc/kubernetes-integration/kubernetes"
-	"github.com/aporeto-inc/trireme"
+	"github.com/aporeto-inc/trireme/interfaces"
 	"github.com/golang/glog"
 )
 
 // Certs is used to monitor the Certificate used all over the Kubernetes Cluster.
 type Certs struct {
-	isolator          trireme.Isolator
+	publicKeyAdder    interfaces.PublicKeyAdder
 	nodeResultChan    chan watch.Event
 	nodeStopChan      chan bool
 	certStopChan      chan bool
@@ -22,10 +22,10 @@ type Certs struct {
 
 // NewCertsWatcher creates a new Certs object and start watching for changes and updates
 // on all the nodes on the Kube Cluster.
-func NewCertsWatcher(client kubernetes.Client, isolator trireme.Isolator, nodeAnnotationKey string) *Certs {
+func NewCertsWatcher(client kubernetes.Client, pki interfaces.PublicKeyAdder, nodeAnnotationKey string) *Certs {
 	// Creating all the channels.
 	certs := &Certs{
-		isolator:          isolator,
+		publicKeyAdder:    pki,
 		nodeResultChan:    make(chan watch.Event),
 		nodeStopChan:      make(chan bool),
 		certStopChan:      make(chan bool),
@@ -97,5 +97,5 @@ func (c *Certs) SyncNodeCerts(client kubernetes.Client) error {
 
 func (c *Certs) addCertToCache(nodeName string, cert []byte) {
 	glog.V(2).Infof("Adding cert for node: %s", nodeName)
-	c.isolator.AddHostSecret(nodeName, cert)
+	c.publicKeyAdder.PublicKeyAdd(nodeName, cert)
 }
