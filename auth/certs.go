@@ -54,9 +54,11 @@ func (c *Certs) StartWatchingCerts() {
 
 // ProcessNodeUpdate is triggered when a new event is received.
 func (c *Certs) ProcessNodeUpdate(node *api.Node, eventType watch.EventType) {
-	annotations := node.GetAnnotations()
-	if cert, ok := annotations[c.nodeAnnotationKey]; ok {
-		c.addCertToCache(node.GetName(), certStringToBytes(cert))
+	if eventType == watch.Added {
+		annotations := node.GetAnnotations()
+		if cert, ok := annotations[c.nodeAnnotationKey]; ok {
+			c.addCertToCache(node.GetName(), certStringToBytes(cert))
+		}
 	}
 }
 
