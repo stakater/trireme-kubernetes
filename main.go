@@ -43,10 +43,10 @@ func main() {
 	}
 
 	// Start all the go routines.
-	wg.Add(2)
+	wg.Add(3)
 	// Start monitoring Docker policies.
 	helper.Trireme.Start()
+	helper.Monitor.Start()
 	// Start monitoring Kubernetes Policies.
 	kubernetesPolicy.Start()
-	wg.Wait()
 }
