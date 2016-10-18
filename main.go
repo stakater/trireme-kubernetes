@@ -28,26 +28,24 @@ func main() {
 	// Trying to load the PKI infra from Kube Secret.
 	// If successful, use it, if not, revert to SharedSecret.
 	pki, err := auth.LoadPKI(config.PKIDirectory)
-	var isolator trireme.Isolator
+	var helper *trireme.Helper
 	if err != nil {
+		// Starting PSK
 		glog.V(2).Infof("Error reading KubeSecret: %s . Falling back to PSK", err)
-		isolator = trireme.NewPSKIsolator(config.KubeNodeName, networks, kubernetesPolicy, nil, []byte(config.TriremePSK))
+		helper = trireme.NewPSKTrireme(config.KubeNodeName, networks, kubernetesPolicy, nil, []byte(config.TriremePSK))
 	} else {
-
-		isolator = trireme.NewPKIIsolator(config.KubeNodeName, networks, kubernetesPolicy, nil, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
-		certs := auth.NewCertsWatcher(*kubernetesPolicy.Kubernetes, isolator, config.NodeAnnotationKey)
+		// Starting PKI
+		helper = trireme.NewPKITrireme(config.KubeNodeName, networks, kubernetesPolicy, nil, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
+		certs := auth.NewCertsWatcher(*kubernetesPolicy.Kubernetes, helper.PkAdder, config.NodeAnnotationKey)
 		certs.RegisterPKI(*kubernetesPolicy.Kubernetes, pki.CertPEM)
 		certs.SyncNodeCerts(*kubernetesPolicy.Kubernetes)
 		go certs.StartWatchingCerts()
 	}
 
-	// Register the Isolator to KubernetesPolicy for UpdatePolicies callback
-	kubernetesPolicy.RegisterIsolator(isolator)
-
 	// Start all the go routines.
 	wg.Add(2)
 	// Start monitoring Docker policies.
-	isolator.Start()
+	helper.Trireme.Start()
 	// Start monitoring Kubernetes Policies.
 	kubernetesPolicy.Start()
 	wg.Wait()

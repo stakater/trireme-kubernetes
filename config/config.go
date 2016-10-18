@@ -24,7 +24,7 @@ const EnvPKIDirectory = "TRIREME_PKI"
 // DefaultPKIDirectory is the directory where the PEMs are mounted.
 const DefaultPKIDirectory = "/var/trireme/"
 
-// DefaultTriremePSK is used fas the default PSK for trireme if not overriden by the user.
+// DefaultTriremePSK is used as the default PSK for trireme if not overriden by the user.
 const DefaultTriremePSK = "Trireme"
 
 // KubeConfigLocation is the default location of the KubeConfig file.
