@@ -103,7 +103,7 @@ func (c *Client) NodeWatcher(resultChan chan<- watch.Event, stopChan <-chan bool
 					glog.V(2).Infof("NodeWatcher channel closed.")
 					break Watch
 				}
-				glog.V(4).Infof("Adding NodeEvent")
+				glog.V(6).Infof("Adding NodeEvent")
 				resultChan <- req
 			}
 		}
