@@ -29,7 +29,10 @@ func (k *KubernetesPolicy) networkPolicyEventHandler(networkPolicy *extensions.N
 		//Reresolve all affected pods
 		for _, pod := range affectedPods.Items {
 			glog.V(2).Infof("affected pod: %s", pod.Name)
-			k.updatePodPolicy(&pod)
+			err := k.updatePodPolicy(&pod)
+			if err != nil {
+				glog.V(2).Infof("UpdatePolicy failed: %s", err)
+			}
 		}
 
 	case watch.Error:
