@@ -110,6 +110,7 @@ func (k *KubernetesPolicy) GetPodPolicy(kubernetesPod string, kubernetesNamespac
 func (k *KubernetesPolicy) GetContainerPolicy(contextID string, runtimeGetter interfaces.RuntimeGetter) (*policy.ContainerPolicyInfo, error) {
 	podName := runtimeGetter.Tags()[KubernetesPodName]
 	podNamespace := runtimeGetter.Tags()[KubernetesPodNamespace]
+	k.cache.addPodToCache(contextID, podName, podNamespace)
 	return k.GetPodPolicy(podName, podNamespace)
 }
 
