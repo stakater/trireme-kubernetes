@@ -141,7 +141,8 @@ func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 	if err != nil {
 		return fmt.Errorf("Couldn't generate a Pod Policy for pod update %s", err)
 	}
-	if err := k.policyUpdater.UpdatePolicy(contextID, containerPolicy); err != nil {
+	returnChan := k.policyUpdater.UpdatePolicy(contextID, containerPolicy)
+	if err := <-returnChan; err != nil {
 		return fmt.Errorf("Error while updating the policy: %s", err)
 	}
 	return nil
