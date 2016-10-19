@@ -153,7 +153,10 @@ func (k *KubernetesPolicy) namespaceSync() error {
 		return fmt.Errorf("Couldn't get all namespaces %s ", err)
 	}
 	for _, namespace := range namespaces.Items {
-		k.updateNamespace(&namespace, watch.Added)
+		err := k.updateNamespace(&namespace, watch.Added)
+		if err != nil {
+			glog.V(1).Infof("Error while processing NS sync %s ", namespace.GetName())
+		}
 	}
 	return nil
 }
@@ -167,7 +170,10 @@ func (k *KubernetesPolicy) processNamespacesEvent(resultChan <-chan watch.Event,
 		case req := <-resultChan:
 			namespace := req.Object.(*api.Namespace)
 			glog.V(2).Infof("Processing namespace event for NS %s ", namespace.GetName())
-			k.updateNamespace(namespace, req.Type)
+			err := k.updateNamespace(namespace, req.Type)
+			if err != nil {
+				glog.V(1).Infof("Error while processing NS event %s ", namespace.GetName())
+			}
 		}
 	}
 }

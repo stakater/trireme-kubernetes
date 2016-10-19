@@ -56,11 +56,17 @@ func (n *NamespaceWatcher) startWatchingNamespace(
 			glog.V(2).Infof("Received Stop signal for Namespace: %s", n.namespace)
 			return
 		case req := <-n.podResultChan:
-			glog.V(2).Infof("Processing PodEvent for Namespace: %s", n.namespace)
-			podEventHandler(req.Object.(*api.Pod), req.Type)
+			glog.V(5).Infof("Processing PodEvent for Namespace: %s", n.namespace)
+			err := podEventHandler(req.Object.(*api.Pod), req.Type)
+			if err != nil {
+				glog.V(1).Infof("Failed processing PodEvent: %s", err)
+			}
 		case req := <-n.policyResultChan:
 			glog.V(2).Infof("Processing PolicyEvent for Namespace: %s", n.namespace)
-			networkPolicyEventHandler(req.Object.(*extensions.NetworkPolicy), req.Type)
+			err := networkPolicyEventHandler(req.Object.(*extensions.NetworkPolicy), req.Type)
+			if err != nil {
+				glog.V(1).Infof("Failed processing NetworkPolicy event: %s", err)
+			}
 		}
 
 	}
@@ -75,7 +81,6 @@ func (n *NamespaceWatcher) syncNamespace(client *kubernetes.Client, updatePod fu
 	for _, pod := range localNamespacePods.Items {
 		if err := updatePod(&pod); err != nil {
 			glog.V(2).Infof("Sync of Pod %s in namespace %s failed: %s", pod.Name, pod.Namespace, err)
-
 		}
 	}
 	return nil

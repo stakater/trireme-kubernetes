@@ -46,20 +46,27 @@ func (c *Certs) StartWatchingCerts() {
 			glog.V(2).Infof("Received Stop signal for Certs")
 			return
 		case req := <-c.nodeResultChan:
-			glog.V(2).Infof("Processing NodeEvents")
-			c.ProcessNodeUpdate(req.Object.(*api.Node), req.Type)
+			glog.V(8).Infof("Processing NodeEvents")
+			err := c.ProcessNodeUpdate(req.Object.(*api.Node), req.Type)
+			if err != nil {
+				glog.V(1).Infof("Error processing node update: %s", err)
+			}
 		}
 	}
 }
 
 // ProcessNodeUpdate is triggered when a new event is received.
-func (c *Certs) ProcessNodeUpdate(node *api.Node, eventType watch.EventType) {
+func (c *Certs) ProcessNodeUpdate(node *api.Node, eventType watch.EventType) error {
 	if eventType == watch.Added {
 		annotations := node.GetAnnotations()
-		if cert, ok := annotations[c.nodeAnnotationKey]; ok {
-			c.addCertToCache(node.GetName(), certStringToBytes(cert))
+
+		cert, ok := annotations[c.nodeAnnotationKey]
+		if !ok {
+			return fmt.Errorf("Certificate not found in annotation for node %s", node.GetName())
 		}
+		c.addCertToCache(node.GetName(), certStringToBytes(cert))
 	}
+	return nil
 }
 
 // StopWatchingCerts stops watching for new certs and stops all the routines.
@@ -68,8 +75,8 @@ func (c *Certs) StopWatchingCerts() {
 	c.certStopChan <- true
 }
 
-// RegisterPKI registers the Cert of this node as an annotation on the KubeAPI.
-func (c *Certs) RegisterPKI(client kubernetes.Client, cert []byte) {
+// AddCertToNodeAnnotation registers the Cert of this node as an annotation on the KubeAPI.
+func (c *Certs) AddCertToNodeAnnotation(client kubernetes.Client, cert []byte) {
 	client.AddLocalNodeAnnotation(c.nodeAnnotationKey, certBytesToString(cert))
 }
 

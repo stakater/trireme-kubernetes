@@ -37,7 +37,7 @@ func main() {
 		// Starting PKI
 		helper = trireme.NewPKITrireme(config.KubeNodeName, networks, kubernetesPolicy, nil, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
 		certs := auth.NewCertsWatcher(*kubernetesPolicy.Kubernetes, helper.PkAdder, config.NodeAnnotationKey)
-		certs.RegisterPKI(*kubernetesPolicy.Kubernetes, pki.CertPEM)
+		certs.AddCertToNodeAnnotation(*kubernetesPolicy.Kubernetes, pki.CertPEM)
 		certs.SyncNodeCerts(*kubernetesPolicy.Kubernetes)
 		go certs.StartWatchingCerts()
 	}
