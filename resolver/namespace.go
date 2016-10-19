@@ -80,7 +80,7 @@ func (n *NamespaceWatcher) syncNamespace(client *kubernetes.Client, updatePod fu
 	}
 	for _, pod := range localNamespacePods.Items {
 		if err := updatePod(&pod); err != nil {
-			glog.V(2).Infof("Sync of Pod %s in namespace %s failed: %s", pod.Name, pod.Namespace, err)
+			glog.V(1).Infof("Sync of Pod %s in namespace %s failed: %s", pod.Name, pod.Namespace, err)
 		}
 	}
 	return nil

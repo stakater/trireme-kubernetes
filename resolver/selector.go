@@ -146,7 +146,7 @@ func individualRule(containerPolicy *policy.ContainerPolicyInfo, rule *extension
 func logRules(containerPolicy *policy.ContainerPolicyInfo) {
 	for i, selector := range containerPolicy.Rules {
 		for _, clause := range selector.Clause {
-			glog.V(2).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
+			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
 		}
 	}
 }
