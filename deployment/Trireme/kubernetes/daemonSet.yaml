@@ -15,6 +15,8 @@ spec:
         -  name: trireme
            image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/kubernetes-integration
            env:
+             - name: SYNC_EXISTING_CONTAINERS
+               value: true
              - name: TRIREME_PKI
                value: /var/trireme/
              - name: TRIREME_CERT

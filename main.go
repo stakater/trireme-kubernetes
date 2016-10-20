@@ -33,11 +33,11 @@ func main() {
 	if err != nil {
 		// Starting PSK
 		glog.V(2).Infof("Error reading KubeSecret: %s . Falling back to PSK", err)
-		helper = trireme.NewPSKTrireme(config.KubeNodeName, networks, kubernetesPolicy, nil, []byte(config.TriremePSK))
+		helper = trireme.NewPSKTrireme(config.KubeNodeName, networks, kubernetesPolicy, nil, config.ExistingContainerSync, []byte(config.TriremePSK))
 
 	} else {
 		// Starting PKI
-		helper = trireme.NewPKITrireme(config.KubeNodeName, networks, kubernetesPolicy, nil, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
+		helper = trireme.NewPKITrireme(config.KubeNodeName, networks, kubernetesPolicy, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
 
 		// Sync the certs over all the Kubernetes Cluster.
 		// 1) Adds the localCert on the localNode annotation

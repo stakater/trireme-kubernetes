@@ -30,14 +30,21 @@ const DefaultTriremePSK = "Trireme"
 // KubeConfigLocation is the default location of the KubeConfig file.
 const KubeConfigLocation = "/.kube/config"
 
+// EnvSyncExistingContainers is the env variable that will define if you sync the existing containers.
+const EnvSyncExistingContainers = "SYNC_EXISTING_CONTAINERS"
+
+// DefaultSyncExistingContainers is the default value if you need to sync all existing containers.
+const DefaultSyncExistingContainers = true
+
 // TriKubeConfig maintains the Configuration of Kubernetes Integration
 type TriKubeConfig struct {
-	KubeEnv            bool
-	KubeNodeName       string
-	NodeAnnotationKey  string
-	PKIDirectory       string
-	KubeConfigLocation string
-	TriremePSK         string
+	KubeEnv               bool
+	KubeNodeName          string
+	NodeAnnotationKey     string
+	PKIDirectory          string
+	KubeConfigLocation    string
+	TriremePSK            string
+	ExistingContainerSync bool
 }
 
 func usage() {
@@ -54,8 +61,9 @@ func LoadConfig() *TriKubeConfig {
 
 	var flagNodeName = flag.String("node", "", "Node name in Kubernetes")
 	var flagNodeAnnotationKey = flag.String("annotation", "", "Trireme Node Annotation key in Kubernetes")
-	var flagDefaultPKIDirectory = flag.String("pki", "", "Directory where the Trireme PKIs are")
-	var flagDefaultKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kubernetes")
+	var flagPKIDirectory = flag.String("pki", "", "Directory where the Trireme PKIs are")
+	var flagKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kubernetes")
+	var flagtSyncExistingContainers = flag.Bool("syncexisting", true, "Sync existing containers")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -64,7 +72,7 @@ func LoadConfig() *TriKubeConfig {
 
 	if os.Getenv("KUBERNETES_PORT") == "" {
 		config.KubeEnv = false
-		config.KubeConfigLocation = *flagDefaultKubeConfigLocation
+		config.KubeConfigLocation = *flagKubeConfigLocation
 		if config.KubeConfigLocation == "" {
 			config.KubeConfigLocation = os.Getenv("HOME") + KubeConfigLocation
 		}
@@ -88,7 +96,7 @@ func LoadConfig() *TriKubeConfig {
 		config.NodeAnnotationKey = DefaultNodeAnnotationKey
 	}
 
-	config.PKIDirectory = *flagDefaultPKIDirectory
+	config.PKIDirectory = *flagPKIDirectory
 	if config.PKIDirectory == "" {
 		config.PKIDirectory = os.Getenv(EnvPKIDirectory)
 	}
@@ -97,6 +105,16 @@ func LoadConfig() *TriKubeConfig {
 	}
 
 	config.TriremePSK = DefaultTriremePSK
+
+	if os.Getenv(EnvSyncExistingContainers) == "" {
+		config.ExistingContainerSync = *flagtSyncExistingContainers
+	}
+	if os.Getenv(EnvSyncExistingContainers) == "true" {
+		config.ExistingContainerSync = true
+	}
+	if os.Getenv(EnvSyncExistingContainers) == "false" {
+		config.ExistingContainerSync = false
+	}
 
 	return config
 }
