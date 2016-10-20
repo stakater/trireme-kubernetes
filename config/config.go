@@ -53,9 +53,9 @@ func usage() {
 func LoadConfig() *TriKubeConfig {
 
 	var flagNodeName = flag.String("node", "", "Node name in Kubernetes")
-	var flagNodeAnnotationKey = flag.String("annotation", "", "Trireme Node Annotation key in Kuebernetes")
+	var flagNodeAnnotationKey = flag.String("annotation", "", "Trireme Node Annotation key in Kubernetes")
 	var flagDefaultPKIDirectory = flag.String("pki", "", "Directory where the Trireme PKIs are")
-	var flagDefaultKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kuebrnetes")
+	var flagDefaultKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kubernetes")
 
 	flag.Usage = usage
 	flag.Parse()
