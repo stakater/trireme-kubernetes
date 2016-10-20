@@ -165,7 +165,7 @@ func (k *KubernetesPolicy) namespaceSync() error {
 
 // NamespacePolicyActivated returns true if the namespace has NetworkPolicies
 // activated on the annotation
-func NamespacePolicyActivated(namespace *api.Namespace) bool {
+func isNamespacePolicyActive(namespace *api.Namespace) bool {
 	//TODO: Check on the correct annotation. For now activating all the existing namespaces
 	if namespace.GetName() == "kube-system" {
 		return false
@@ -183,7 +183,7 @@ func (k *KubernetesPolicy) updateNamespace(namespace *api.Namespace, eventType w
 			glog.V(2).Infof("Namespace %s Added. already active", namespace.Name)
 			return nil
 		}
-		if !NamespacePolicyActivated(namespace) {
+		if !isNamespacePolicyActive(namespace) {
 			// Namespace doesn't have NetworkPolicies activated
 			glog.V(2).Infof("Namespace %s Added. doesn't have NetworkPolicies support. Not activating", namespace.Name)
 			return nil
@@ -198,7 +198,7 @@ func (k *KubernetesPolicy) updateNamespace(namespace *api.Namespace, eventType w
 		}
 
 	case watch.Modified:
-		if NamespacePolicyActivated(namespace) {
+		if isNamespacePolicyActive(namespace) {
 			if k.cache.namespaceStatus(namespace.GetName()) {
 				glog.V(2).Infof("Namespace %s Modified. already active", namespace.Name)
 				return nil
