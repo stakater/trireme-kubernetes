@@ -18,7 +18,7 @@ func main() {
 	glog.V(2).Infof("Config used: %+v ", config)
 
 	namespace := "default"
-	// Create New PolicyEngine for Kubernetes
+	// Create New PolicyEngine for  Kubernetes
 	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeConfigLocation, namespace, config.KubeNodeName)
 	if err != nil {
 		panic(err)
