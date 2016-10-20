@@ -93,7 +93,7 @@ func generatePortTags(ports []extensions.NetworkPolicyPort) []policy.KeyValueOpe
 
 }
 
-func individualRule(containerPolicy *policy.ContainerPolicyInfo, rule *extensions.NetworkPolicyIngressRule) error {
+func individualRule(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule) error {
 
 	for _, peer := range rule.From {
 
@@ -133,7 +133,7 @@ func individualRule(containerPolicy *policy.ContainerPolicyInfo, rule *extension
 			}
 
 		}
-		selector := policy.TagSelectorInfo{
+		selector := policy.TagSelector{
 			Clause: completeClause,
 			Action: policy.Accept,
 		}
@@ -143,7 +143,7 @@ func individualRule(containerPolicy *policy.ContainerPolicyInfo, rule *extension
 	return nil
 }
 
-func logRules(containerPolicy *policy.ContainerPolicyInfo) {
+func logRules(containerPolicy *policy.PUPolicy) {
 	for i, selector := range containerPolicy.Rules {
 		for _, clause := range selector.Clause {
 			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)

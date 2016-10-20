@@ -42,8 +42,3 @@ func LoadPKI(dir string) (*PKI, error) {
 		CaCertPEM: caCertPEM,
 	}, nil
 }
-
-// PublishPKI Publishes on the node annotation the PublicKey to use for this node
-func (p *PKI) PublishPKI() {
-
-}
