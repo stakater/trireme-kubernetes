@@ -7,13 +7,13 @@ import (
 	"k8s.io/kubernetes/pkg/watch"
 
 	"github.com/aporeto-inc/kubernetes-integration/kubernetes"
-	"github.com/aporeto-inc/trireme/interfaces"
+	"github.com/aporeto-inc/trireme/enforcer"
 	"github.com/golang/glog"
 )
 
 // Certs is used to monitor the Certificate used all over the Kubernetes Cluster.
 type Certs struct {
-	publicKeyAdder    interfaces.PublicKeyAdder
+	publicKeyAdder    enforcer.PublicKeyAdder
 	nodeResultChan    chan watch.Event
 	nodeStopChan      chan bool
 	certStopChan      chan bool
@@ -22,7 +22,7 @@ type Certs struct {
 
 // NewCertsWatcher creates a new Certs object and start watching for changes and updates
 // on all the nodes on the Kube Cluster.
-func NewCertsWatcher(client kubernetes.Client, pki interfaces.PublicKeyAdder, nodeAnnotationKey string) *Certs {
+func NewCertsWatcher(client kubernetes.Client, pki enforcer.PublicKeyAdder, nodeAnnotationKey string) *Certs {
 	// Creating all the channels.
 	certs := &Certs{
 		publicKeyAdder:    pki,

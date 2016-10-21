@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/aporeto-inc/kubernetes-integration/kubernetes"
+	"github.com/aporeto-inc/trireme"
 
-	"github.com/aporeto-inc/trireme/interfaces"
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/golang/glog"
 
@@ -31,7 +31,7 @@ const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-poli
 // It implements the Trireme Resolver interface and implements the policies defined
 // by Kubernetes NetworkPolicy API.
 type KubernetesPolicy struct {
-	policyUpdater     interfaces.PolicyUpdater
+	policyUpdater     trireme.PolicyUpdater
 	Kubernetes        *kubernetes.Client
 	cache             *Cache
 	stopAll           chan bool
@@ -54,7 +54,7 @@ func NewKubernetesPolicy(kubeconfig string, namespace string, nodename string) (
 }
 
 // SetPolicyUpdater registers the interface used for updating Policies explicitely.
-func (k *KubernetesPolicy) SetPolicyUpdater(p interfaces.PolicyUpdater) error {
+func (k *KubernetesPolicy) SetPolicyUpdater(p trireme.PolicyUpdater) error {
 	k.policyUpdater = p
 	return nil
 }
@@ -85,7 +85,9 @@ func (k *KubernetesPolicy) GetPodPolicy(kubernetesPod string, kubernetesNamespac
 	if !k.cache.namespaceStatus(kubernetesNamespace) {
 		// TODO: Find a way to tell to TRIREME Allow All ??
 		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll", kubernetesNamespace)
-		return nil, nil
+		pupolicy := policy.NewPUPolicy()
+		pupolicy.TriremeAction = policy.AllowAll
+		return pupolicy, nil
 	}
 
 	allRules, err := k.Kubernetes.PodRules(kubernetesPod, kubernetesNamespace)
@@ -104,18 +106,18 @@ func (k *KubernetesPolicy) GetPodPolicy(kubernetesPod string, kubernetesNamespac
 	return containerPolicy, nil
 }
 
-// GetPolicy returns the Policy for the target PU.
+// ResolvePolicy returns the Policy for the target PU.
 // The policy for the PU will be based on the defined
 // Kubernetes NetworkPolicies on the Pod to which the PU belongs.
-func (k *KubernetesPolicy) GetPolicy(contextID string, runtimeGetter interfaces.RuntimeGetter) (*policy.PUPolicy, error) {
+func (k *KubernetesPolicy) ResolvePolicy(contextID string, runtimeGetter policy.RuntimeReader) (*policy.PUPolicy, error) {
 	podName := runtimeGetter.Tags()[KubernetesPodName]
 	podNamespace := runtimeGetter.Tags()[KubernetesPodNamespace]
 	k.cache.addPodToCache(contextID, podName, podNamespace)
 	return k.GetPodPolicy(podName, podNamespace)
 }
 
-// DeletePU deletes a specific PU.
-func (k *KubernetesPolicy) DeletePU(contextID string) error {
+// HandleDeletePU deletes a specific PU.
+func (k *KubernetesPolicy) HandleDeletePU(contextID string) error {
 	glog.V(2).Infof("Deleting Container Policy %s", contextID)
 	return nil
 }

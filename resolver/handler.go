@@ -52,13 +52,13 @@ func (k *KubernetesPolicy) podEventHandler(pod *api.Pod, eventType watch.EventTy
 		if err != nil {
 			return fmt.Errorf("Error for PodDelete: %s ", err)
 		}
-	case watch.Modified:
-		glog.V(2).Infof("New K8S pod Modified detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
-		err := k.updatePodPolicy(pod)
-		if err != nil {
-			return fmt.Errorf("Failed UpdatePolicy on ModifiedPodEvent: %s", err)
-		}
-
+		/*	case watch.Modified:
+			glog.V(2).Infof("New K8S pod Modified detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
+			err := k.updatePodPolicy(pod)
+			if err != nil {
+				return fmt.Errorf("Failed UpdatePolicy on ModifiedPodEvent: %s", err)
+			}
+		*/
 	case watch.Error:
 		return fmt.Errorf("Error on pod event channel ")
 	}
