@@ -59,6 +59,7 @@ func main() {
 	// Start all the go routines.
 	trireme.Start()
 	monitor.Start()
+	kubernetesPolicy.Start()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -66,6 +67,7 @@ func main() {
 	<-c
 
 	fmt.Println("Bye Kubernetes!")
+	kubernetesPolicy.Stop()
 	monitor.Stop()
 	trireme.Stop()
 
