@@ -15,7 +15,7 @@ func (k *KubernetesPolicy) networkPolicyEventHandler(networkPolicy *extensions.N
 	switch eventType {
 	case watch.Added, watch.Deleted, watch.Modified:
 
-		glog.V(3).Infof("New K8S NetworkPolicy change detected: %s namespace: %s", networkPolicy.GetName(), networkPolicy.GetNamespace())
+		glog.V(5).Infof("New K8S NetworkPolicy change detected: %s namespace: %s", networkPolicy.GetName(), networkPolicy.GetNamespace())
 
 		// TODO: Filter on pods from localNode only.
 		allPods, err := k.Kubernetes.LocalPods(networkPolicy.Namespace)
@@ -28,7 +28,7 @@ func (k *KubernetesPolicy) networkPolicyEventHandler(networkPolicy *extensions.N
 		}
 		//Reresolve all affected pods
 		for _, pod := range affectedPods.Items {
-			glog.V(3).Infof("affected pod: %s", pod.Name)
+			glog.V(5).Infof("affected pod: %s", pod.Name)
 			err := k.updatePodPolicy(&pod)
 			if err != nil {
 				return fmt.Errorf("UpdatePolicy failed: %s", err)
@@ -45,15 +45,15 @@ func (k *KubernetesPolicy) networkPolicyEventHandler(networkPolicy *extensions.N
 func (k *KubernetesPolicy) podEventHandler(pod *api.Pod, eventType watch.EventType) error {
 	switch eventType {
 	case watch.Added:
-		glog.V(2).Infof("New K8S pod Added detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
+		glog.V(5).Infof("New K8S pod Added detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
 	case watch.Deleted:
-		glog.V(2).Infof("New K8S pod Deleted detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
+		glog.V(5).Infof("New K8S pod Deleted detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
 		err := k.cache.deleteFromCacheByPodName(pod.GetName(), pod.GetNamespace())
 		if err != nil {
 			return fmt.Errorf("Error for PodDelete: %s ", err)
 		}
 		/*	case watch.Modified:
-			glog.V(2).Infof("New K8S pod Modified detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
+			glog.V(5).Infof("New K8S pod Modified detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
 			err := k.updatePodPolicy(pod)
 			if err != nil {
 				return fmt.Errorf("Failed UpdatePolicy on ModifiedPodEvent: %s", err)

@@ -155,14 +155,42 @@ func individualPodRules(containerPolicy *policy.PUPolicy, rule *extensions.Netwo
 	return nil
 }
 
-func individualNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, namespace string) error {
-	return nil
-}
-
 func logRules(containerPolicy *policy.PUPolicy) {
 	for i, selector := range containerPolicy.Rules {
 		for _, clause := range selector.Clause {
 			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
 		}
 	}
+}
+
+// createPolicyRules populate the RuleDB of a PU based on the list
+// of IngressRules coming from Kubernetes.
+func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, kubernetesNamespace string) (*policy.PUPolicy, error) {
+	containerPolicy := policy.NewPUPolicy()
+
+	for _, rule := range *rules {
+		// Populate the clauses related to each individual rules.
+		individualPodRules(containerPolicy, &rule, kubernetesNamespace)
+	}
+	logRules(containerPolicy)
+	return containerPolicy, nil
+}
+
+func allowAllPolicy() *policy.PUPolicy {
+	containerPolicy := policy.NewPUPolicy()
+	completeClause := []policy.KeyValueOperator{
+		policy.KeyValueOperator{
+			Key:      "@port",
+			Operator: policy.Equal,
+			Value:    []string{"*"},
+		},
+	}
+	selector := policy.TagSelector{
+		Clause: completeClause,
+		Action: policy.Accept,
+	}
+	containerPolicy.Rules = append(containerPolicy.Rules, selector)
+	containerPolicy.TriremeAction = policy.AllowAll
+
+	return containerPolicy
 }

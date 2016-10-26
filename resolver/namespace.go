@@ -62,7 +62,7 @@ func (n *NamespaceWatcher) startWatchingNamespace(
 				glog.V(1).Infof("Failed processing PodEvent: %s", err)
 			}
 		case req := <-n.policyResultChan:
-			glog.V(2).Infof("Processing PolicyEvent for Namespace: %s", n.namespace)
+			glog.V(5).Infof("Processing PolicyEvent for Namespace: %s", n.namespace)
 			err := networkPolicyEventHandler(req.Object.(*extensions.NetworkPolicy), req.Type)
 			if err != nil {
 				glog.V(1).Infof("Failed processing NetworkPolicy event: %s", err)
