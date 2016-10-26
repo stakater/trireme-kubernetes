@@ -93,7 +93,16 @@ func generatePortTags(ports []extensions.NetworkPolicyPort) []policy.KeyValueOpe
 
 }
 
-func individualRule(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule) error {
+func generateNamespacekvo(namespace string) []policy.KeyValueOperator {
+	kvo := policy.KeyValueOperator{
+		Key:      "@namespace",
+		Operator: policy.Equal,
+		Value:    []string{namespace},
+	}
+	return []policy.KeyValueOperator{kvo}
+}
+
+func individualPodRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, namespace string) error {
 
 	for _, peer := range rule.From {
 
@@ -108,6 +117,9 @@ func individualRule(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPo
 		// Initialize the completeClause with the port matching
 		completeClause := []policy.KeyValueOperator{}
 		completeClause = append(completeClause, generatePortTags(rule.Ports)...)
+
+		// Also add the Pod Namespace as a requirement.
+		completeClause = append(completeClause, generateNamespacekvo(namespace)...)
 		for _, requirement := range requirements {
 
 			// Each requirement is ANDed
@@ -140,6 +152,10 @@ func individualRule(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPo
 		containerPolicy.Rules = append(containerPolicy.Rules, selector)
 	}
 
+	return nil
+}
+
+func individualNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, namespace string) error {
 	return nil
 }
 

@@ -61,12 +61,13 @@ func (k *KubernetesPolicy) SetPolicyUpdater(p trireme.PolicyUpdater) error {
 
 // createPolicyRules populate the RuleDB of a PU based on the list
 // of IngressRules coming from Kubernetes.
-func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule) (*policy.PUPolicy, error) {
+func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, kubernetesNamespace string) (*policy.PUPolicy, error) {
 	containerPolicy := policy.NewPUPolicy()
 
 	for _, rule := range *rules {
 		// Populate the clauses related to each individual rules.
-		individualRule(containerPolicy, &rule)
+		individualPodRules(containerPolicy, &rule, kubernetesNamespace)
+		individualNamespaceRules(containerPolicy, &rule, kubernetesNamespace)
 	}
 	logRules(containerPolicy)
 	return containerPolicy, nil
@@ -75,11 +76,13 @@ func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule) (*policy.PU
 // GetPodPolicy get the Trireme Policy for a specific Pod and Namespace.
 func (k *KubernetesPolicy) GetPodPolicy(kubernetesPod string, kubernetesNamespace string) (*policy.PUPolicy, error) {
 	// Adding all the specific Kubernetes K,V from the Pod.
-	// Iterate on PodLabels and add them as tags
+	// Iterate on PodLabels and add them as tags.
 	podLabels, err := k.Kubernetes.PodLabels(kubernetesPod, kubernetesNamespace)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get Kubernetes labels for container %s : %v", kubernetesPod, err)
 	}
+	// adding the namespace as an extra label.
+	podLabels["@namespace"] = kubernetesNamespace
 
 	// Check if the Pod's namespace is activated.
 	if !k.cache.namespaceStatus(kubernetesNamespace) {
@@ -96,7 +99,7 @@ func (k *KubernetesPolicy) GetPodPolicy(kubernetesPod string, kubernetesNamespac
 	}
 
 	// Step2: Translate all the metadata labels to Trireme Rules
-	containerPolicy, err := createPolicyRules(allRules)
+	containerPolicy, err := createPolicyRules(allRules, kubernetesNamespace)
 	if err != nil {
 		return nil, err
 	}
@@ -222,11 +225,11 @@ func (k *KubernetesPolicy) updateNamespace(namespace *api.Namespace, eventType w
 func (k *KubernetesPolicy) activateNamespace(namespace *api.Namespace) error {
 	glog.V(2).Infof("Activating namespace %s ", namespace.Name)
 	namespaceWatcher := NewNamespaceWatcher(k.Kubernetes, namespace.Name)
+	k.cache.activateNamespaceWatcher(namespace.Name, namespaceWatcher)
 	// SyncExistingPods on Namespace
 	namespaceWatcher.syncNamespace(k.Kubernetes, k.updatePodPolicy)
 	// Start watching new POD/Policy events.
 	go namespaceWatcher.startWatchingNamespace(k.podEventHandler, k.networkPolicyEventHandler)
-	k.cache.activateNamespaceWatcher(namespace.Name, namespaceWatcher)
 	return nil
 }
 
