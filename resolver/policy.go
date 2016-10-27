@@ -10,7 +10,6 @@ import (
 	"github.com/golang/glog"
 
 	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/apis/extensions"
 	"k8s.io/kubernetes/pkg/watch"
 )
 
@@ -59,20 +58,6 @@ func (k *KubernetesPolicy) SetPolicyUpdater(p trireme.PolicyUpdater) error {
 	return nil
 }
 
-// createPolicyRules populate the RuleDB of a PU based on the list
-// of IngressRules coming from Kubernetes.
-func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, kubernetesNamespace string) (*policy.PUPolicy, error) {
-	containerPolicy := policy.NewPUPolicy()
-
-	for _, rule := range *rules {
-		// Populate the clauses related to each individual rules.
-		individualPodRules(containerPolicy, &rule, kubernetesNamespace)
-		individualNamespaceRules(containerPolicy, &rule, kubernetesNamespace)
-	}
-	logRules(containerPolicy)
-	return containerPolicy, nil
-}
-
 // GetPodPolicy get the Trireme Policy for a specific Pod and Namespace.
 func (k *KubernetesPolicy) GetPodPolicy(kubernetesPod string, kubernetesNamespace string) (*policy.PUPolicy, error) {
 	// Adding all the specific Kubernetes K,V from the Pod.
@@ -88,8 +73,8 @@ func (k *KubernetesPolicy) GetPodPolicy(kubernetesPod string, kubernetesNamespac
 	if !k.cache.namespaceStatus(kubernetesNamespace) {
 		// TODO: Find a way to tell to TRIREME Allow All ??
 		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll", kubernetesNamespace)
-		pupolicy := policy.NewPUPolicy()
-		pupolicy.TriremeAction = policy.AllowAll
+		pupolicy := allowAllPolicy()
+		pupolicy.PolicyTags = podLabels
 		return pupolicy, nil
 	}
 
