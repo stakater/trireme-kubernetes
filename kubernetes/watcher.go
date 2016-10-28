@@ -27,7 +27,7 @@ func (c *Client) PolicyWatcher(namespace string, resultChan chan<- watch.Event, 
 					glog.V(2).Infof("NetworkPolicy Watcher channel closed.")
 					break Watch
 				}
-				glog.V(4).Infof("Adding NetworkPolicyEvent")
+				glog.V(5).Infof("Adding NetworkPolicyEvent")
 				resultChan <- req
 			}
 		}
@@ -53,7 +53,7 @@ func (c *Client) LocalPodWatcher(namespace string, resultChan chan<- watch.Event
 					glog.V(2).Infof("LocalPod Watcher channel closed.")
 					break Watch
 				}
-				glog.V(4).Infof("Adding PodEvent")
+				glog.V(5).Infof("Adding PodEvent")
 				resultChan <- req
 			}
 		}
@@ -78,7 +78,7 @@ func (c *Client) NamespaceWatcher(resultChan chan<- watch.Event, stopChan <-chan
 					glog.V(2).Infof("NamespaceWatcher channel closed.")
 					break Watch
 				}
-				glog.V(4).Infof("Adding NamespaceEvent")
+				glog.V(5).Infof("Adding NamespaceEvent")
 				resultChan <- req
 			}
 		}
