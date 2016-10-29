@@ -78,6 +78,7 @@ func LoadConfig() *TriKubeConfig {
 		}
 	} else {
 		config.KubeEnv = true
+		config.KubeConfigLocation = ""
 	}
 
 	config.KubeNodeName = *flagNodeName

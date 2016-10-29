@@ -7,14 +7,15 @@ import (
 
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/extensions"
-	client "k8s.io/kubernetes/pkg/client/unversioned"
+	client "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
+	"k8s.io/kubernetes/pkg/client/restclient"
 	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
 	"k8s.io/kubernetes/pkg/fields"
 )
 
 // Client is the Trireme representation of the Client.
 type Client struct {
-	kubeClient *client.Client
+	kubeClient *client.Clientset
 	localNode  string
 }
 
@@ -22,13 +23,8 @@ type Client struct {
 func NewClient(kubeconfig string, namespace string, nodename string) (*Client, error) {
 	Client := &Client{}
 	Client.localNode = nodename
-	var err error
-	if kubeconfig == "" {
-		err = Client.InitInClusterKubernetesClient()
-	} else {
-		err = Client.InitKubernetesClient(kubeconfig)
-	}
-	if err != nil {
+
+	if err := Client.InitKubernetesClient(kubeconfig); err != nil {
 		return nil, fmt.Errorf("Couldn't initialize Kubernetes Client: %v", err)
 	}
 	return Client, nil
@@ -37,24 +33,24 @@ func NewClient(kubeconfig string, namespace string, nodename string) (*Client, e
 // InitKubernetesClient Initialize the Kubernetes client
 func (c *Client) InitKubernetesClient(kubeconfig string) error {
 
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		return fmt.Errorf("Error opening Kubeconfig: %v", err)
+	var config *restclient.Config
+	var err error
+
+	if kubeconfig == "" {
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return fmt.Errorf("Error Building InCluster config: %v", err)
+		}
+	} else {
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			return fmt.Errorf("Error Building config from Kubeconfig: %v", err)
+		}
 	}
 
-	myClient, err := client.New(config)
+	myClient, err := client.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("Error creating REST Kube Client: %v", err)
-	}
-	c.kubeClient = myClient
-	return nil
-}
-
-// InitInClusterKubernetesClient setup the client to use a InCluster authentication.
-func (c *Client) InitInClusterKubernetesClient() error {
-	myClient, err := client.NewInCluster()
-	if err != nil {
-		return fmt.Errorf("Error creating in cluster REST Kube Client: %v", err)
 	}
 	c.kubeClient = myClient
 	return nil

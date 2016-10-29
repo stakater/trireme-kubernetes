@@ -25,7 +25,8 @@ func main() {
 	// Create New PolicyEngine for  Kubernetes
 	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeConfigLocation, namespace, config.KubeNodeName)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Error initializing KubernetesPolicy, exiting: %s \n", err)
+		return
 	}
 
 	// Naive implementation for PKI:
@@ -39,19 +40,19 @@ func main() {
 	if err != nil {
 		// Starting PSK
 		glog.V(2).Infof("Error reading KubeSecret: %s . Falling back to PSK", err)
-		trireme, monitor = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, networks, kubernetesPolicy, nil, config.ExistingContainerSync, []byte(config.TriremePSK))
+		trireme, monitor = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, networks, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK))
 
 	} else {
 		// Starting PKI
-		trireme, monitor, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, networks, kubernetesPolicy, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
+		trireme, monitor, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, networks, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
 
 		// Sync the certs over all the Kubernetes Cluster.
 		// 1) Adds the localCert on the localNode annotation
 		// 2) Sync All the Certs from the other nodes to the CertCache (interface)
 		// 3) Waits and listen for new nodes coming up.
-		certs := auth.NewCertsWatcher(*kubernetesPolicy.Kubernetes, publicKeyAdder, config.NodeAnnotationKey)
-		certs.AddCertToNodeAnnotation(*kubernetesPolicy.Kubernetes, pki.CertPEM)
-		certs.SyncNodeCerts(*kubernetesPolicy.Kubernetes)
+		certs := auth.NewCertsWatcher(*kubernetesPolicy.KubernetesClient, publicKeyAdder, config.NodeAnnotationKey)
+		certs.AddCertToNodeAnnotation(*kubernetesPolicy.KubernetesClient, pki.CertPEM)
+		certs.SyncNodeCerts(*kubernetesPolicy.KubernetesClient)
 		go certs.StartWatchingCerts()
 
 	}
