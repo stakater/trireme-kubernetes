@@ -6,7 +6,7 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/watch"
 
-	"github.com/aporeto-inc/kubernetes-integration/kubernetes"
+	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 	"github.com/aporeto-inc/trireme/enforcer"
 	"github.com/golang/glog"
 )

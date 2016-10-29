@@ -5,10 +5,10 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/aporeto-inc/kubernetes-integration/auth"
-	"github.com/aporeto-inc/kubernetes-integration/config"
-	"github.com/aporeto-inc/kubernetes-integration/resolver"
 	"github.com/aporeto-inc/trireme"
+	"github.com/aporeto-inc/trireme-kubernetes/auth"
+	"github.com/aporeto-inc/trireme-kubernetes/config"
+	"github.com/aporeto-inc/trireme-kubernetes/resolver"
 	"github.com/aporeto-inc/trireme/configurator"
 	"github.com/aporeto-inc/trireme/enforcer"
 	"github.com/aporeto-inc/trireme/monitor"

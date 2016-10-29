@@ -1,14 +1,14 @@
 FROM ubuntu
 MAINTAINER Bernard Van De Walle <bernard@aporeto.com>
 
-RUN mkdir -p /opt/kubernetes-integration
+RUN mkdir -p /opt/trireme-kubernetes
 RUN apt-get update && apt-get install -y \
     libnetfilter-queue-dev \
     iptables \
 && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ADD app /opt/kubernetes-integration/
-ADD run.sh /opt/kubernetes-integration/run.sh
+ADD app /opt/trireme-kubernetes/
+ADD run.sh /opt/trireme-kubernetes/run.sh
 
-WORKDIR /opt/kubernetes-integration
+WORKDIR /opt/trireme-kubernetes
 CMD ./run.sh
