@@ -13,7 +13,7 @@ spec:
       hostNetwork: true
       containers:
         -  name: trireme
-           image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/kubernetes-integration
+           image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/trireme-kubernetes
            env:
              - name: SYNC_EXISTING_CONTAINERS
                value: "true"

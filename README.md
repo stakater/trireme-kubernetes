@@ -1,4 +1,4 @@
-# kubernetes-integration
+# trireme-kubernetes
 
 Trireme integration with Kubernetes
 
@@ -22,7 +22,7 @@ build everything (you will need K8S whole repo), and launch the agent (in debug 
 
 ```
 go build
-./kubernetes-integration --logtostderr=1 --v=6
+./trireme-kubernetes --logtostderr=1 --v=6
 ```
 
 Provision example policies and example pods:

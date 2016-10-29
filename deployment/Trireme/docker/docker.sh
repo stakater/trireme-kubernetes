@@ -6,4 +6,4 @@ docker run \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /root/.kube/config:/root/.kube/config \
   --restart always \
-926088932149.dkr.ecr.us-west-2.amazonaws.com/kubernetes-integration
+926088932149.dkr.ecr.us-west-2.amazonaws.com/trireme-kubernetes

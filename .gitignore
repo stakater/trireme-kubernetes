@@ -1,4 +1,4 @@
 .DS_Store
 docker/app
-kubernetes-integration
+trireme-kubernetes
 testresults.xml

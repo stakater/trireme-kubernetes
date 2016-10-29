@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aporeto-inc/kubepox"
-	"github.com/aporeto-inc/kubernetes-integration/kubernetes"
+	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 	"github.com/aporeto-inc/trireme"
 
 	"github.com/aporeto-inc/trireme/policy"

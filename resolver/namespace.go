@@ -3,7 +3,7 @@ package resolver
 import (
 	"fmt"
 
-	"github.com/aporeto-inc/kubernetes-integration/kubernetes"
+	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 	"github.com/golang/glog"
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/extensions"

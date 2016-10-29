@@ -1,7 +1,7 @@
 
 include domingo.mk
 
-PROJECT_NAME := kubernetes-integration
+PROJECT_NAME := trireme-kubernetes
 
 ci: domingo_contained_build
 
@@ -16,6 +16,6 @@ build:
 
 package:
 	mkdir -p docker/app
-	cp -a kubernetes-integration  docker/app
+	cp -a trireme-kubernetes  docker/app
 
 clean:
