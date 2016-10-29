@@ -25,7 +25,8 @@ func main() {
 	// Create New PolicyEngine for  Kubernetes
 	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeConfigLocation, namespace, config.KubeNodeName)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Error initializing KubernetesPolicy, exiting: %s \n", err)
+		return
 	}
 
 	// Naive implementation for PKI:

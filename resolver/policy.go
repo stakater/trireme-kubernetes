@@ -1,6 +1,7 @@
 package resolver
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/aporeto-inc/kubepox"
@@ -27,10 +28,6 @@ const KubernetesContainerName = "io.kubernetes.container.name"
 // KubernetesNetworkPolicyAnnotationID is the string used as an annotation key
 // to define if a namespace should have the networkpolicy framework enabled.
 const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-policy"
-
-// KubernetesNetworkPolicyAnnotationValue is the value that must be defined as annotation
-// on the NS for activating network-policies for that specific NS.
-const KubernetesNetworkPolicyAnnotationValue = "net.beta.kubernetes.io/network-policy"
 
 // KubernetesPolicy represents a Trireme Policer for Kubernetes.
 // It implements the Trireme Resolver interface and implements the policies defined
@@ -67,12 +64,23 @@ func isNamespacePolicyActive(namespace *api.Namespace) bool {
 		return false
 	}
 
-	// Check if annotation is present.
+	// Check if annotation is present. As NetworkPolicies in K8s are still beta
+	// The format needs to be manually parsed out of JSON.
 	value, ok := namespace.GetAnnotations()[KubernetesNetworkPolicyAnnotationID]
+
 	if !ok {
 		return false
 	}
-	if value == KubernetesNetworkPolicyAnnotationValue {
+	fmt.Printf("Got %s  ", value)
+	networkPolicyAnnotation := &NamespaceNetworkPolicy{}
+	if err := json.Unmarshal([]byte(value), networkPolicyAnnotation); err != nil {
+		return false
+	}
+	//
+	if networkPolicyAnnotation != nil &&
+		networkPolicyAnnotation.Ingress != nil &&
+		networkPolicyAnnotation.Ingress.Isolation != nil &&
+		*networkPolicyAnnotation.Ingress.Isolation == DefaultDeny {
 		return true
 	}
 	return false
