@@ -1,8 +1,11 @@
 package resolver
 
 import (
+	"fmt"
+
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/golang/glog"
+	"k8s.io/kubernetes/pkg/api"
 	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/apis/extensions"
 	"k8s.io/kubernetes/pkg/labels"
@@ -109,10 +112,9 @@ func individualPodRules(containerPolicy *policy.PUPolicy, rule *extensions.Netwo
 		// Individual From. Each From is ORed.
 		peerSelector, err := apiu.LabelSelectorAsSelector(peer.PodSelector)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error while parsing Peer label selector %s", err)
 		}
-
-		requirements, _ := peerSelector.Requirements()
+		peerRequirements, _ := peerSelector.Requirements()
 
 		// Initialize the completeClause with the port matching
 		completeClause := []policy.KeyValueOperator{}
@@ -120,8 +122,9 @@ func individualPodRules(containerPolicy *policy.PUPolicy, rule *extensions.Netwo
 
 		// Also add the Pod Namespace as a requirement.
 		completeClause = append(completeClause, generateNamespacekvo(namespace)...)
-		for _, requirement := range requirements {
 
+		// Go over each specific requirement and add it as a clause.
+		for _, requirement := range peerRequirements {
 			// Each requirement is ANDed
 			switch requirement.Operator() {
 			case selection.Equals:
@@ -155,6 +158,45 @@ func individualPodRules(containerPolicy *policy.PUPolicy, rule *extensions.Netwo
 	return nil
 }
 
+func individualNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList) error {
+
+	matchedNamespaces := map[string]bool{}
+	for _, peer := range rule.From {
+		// Individual From. Each From is ORed.
+		namespaceSelector, err := apiu.LabelSelectorAsSelector(peer.NamespaceSelector)
+		if err != nil {
+			return fmt.Errorf("Error while parsing Peer label selector %s", err)
+		}
+		for _, namespace := range allNamespaces.Items {
+			if namespaceSelector.Matches(labels.Set(namespace.GetLabels())) {
+				matchedNamespaces[namespace.GetName()] = true
+			}
+		}
+	}
+
+	allowedNamespaces := []string{}
+	for namespace := range matchedNamespaces {
+		// We don't want to match all of the current namespace.
+		if namespace == podNamespace {
+			continue
+		}
+		allowedNamespaces = append(allowedNamespaces, namespace)
+	}
+	clause := policy.KeyValueOperator{
+		Key:      "@namespace",
+		Operator: policy.Equal,
+		Value:    allowedNamespaces,
+	}
+
+	selector := policy.TagSelector{
+		Clause: []policy.KeyValueOperator{clause},
+		Action: policy.Accept,
+	}
+
+	containerPolicy.Rules = append(containerPolicy.Rules, selector)
+	return nil
+}
+
 func logRules(containerPolicy *policy.PUPolicy) {
 	for i, selector := range containerPolicy.Rules {
 		for _, clause := range selector.Clause {
@@ -165,12 +207,14 @@ func logRules(containerPolicy *policy.PUPolicy) {
 
 // createPolicyRules populate the RuleDB of a PU based on the list
 // of IngressRules coming from Kubernetes.
-func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, kubernetesNamespace string) (*policy.PUPolicy, error) {
+func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, kubernetesNamespace string, allNamespaces *api.NamespaceList) (*policy.PUPolicy, error) {
 	containerPolicy := policy.NewPUPolicy()
 
 	for _, rule := range *rules {
 		// Populate the clauses related to each individual rules.
-		individualPodRules(containerPolicy, &rule, kubernetesNamespace)
+		if err := individualPodRules(containerPolicy, &rule, kubernetesNamespace); err != nil {
+			return nil, fmt.Errorf("Error creating policyRule: %s", err)
+		}
 	}
 	logRules(containerPolicy)
 	return containerPolicy, nil
@@ -180,7 +224,7 @@ func allowAllPolicy() *policy.PUPolicy {
 	containerPolicy := policy.NewPUPolicy()
 	completeClause := []policy.KeyValueOperator{
 		policy.KeyValueOperator{
-			Key:      "@port",
+			Key:      "@namespace",
 			Operator: policy.Equal,
 			Value:    []string{"*"},
 		},

@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/aporeto-inc/kubepox"
-	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 	"github.com/aporeto-inc/trireme"
+	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/golang/glog"
@@ -35,7 +35,7 @@ const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-poli
 type KubernetesPolicy struct {
 	policyUpdater     trireme.PolicyUpdater
 	KubernetesClient  *kubernetes.Client
-	cache             *Cache
+	cache             *cache
 	stopAll           chan bool
 	stopNamespaceChan chan bool
 	routineCount      int
@@ -55,9 +55,9 @@ func NewKubernetesPolicy(kubeconfig string, namespace string, nodename string) (
 	}, nil
 }
 
-// isNamespacePolicyActive returns true if the namespace has NetworkPolicies
+// isNamespaceNetworkPolicyActive returns true if the namespace has NetworkPolicies
 // activated on the annotation
-func isNamespacePolicyActive(namespace *api.Namespace) bool {
+func isNamespaceNetworkPolicyActive(namespace *api.Namespace) bool {
 	// Statically never actvating anything into Kube-System namespace.
 	// TODO: Allow KubeSystem to have networking policies enabled ?
 	if namespace.GetName() == "kube-system" {
@@ -128,7 +128,7 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	podLabels["@namespace"] = kubernetesNamespace
 
 	// Check if the Pod's namespace is activated.
-	if !k.cache.namespaceStatus(kubernetesNamespace) {
+	if !k.cache.isNamespaceActive(kubernetesNamespace) {
 		// TODO: Find a way to tell to TRIREME Allow All ??
 		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll", kubernetesNamespace)
 		pupolicy := allowAllPolicy()
@@ -140,9 +140,9 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get the NetworkPolicies for Pod %s : %s", kubernetesPod, err)
 	}
+	allNamespaces, err := k.KubernetesClient.AllNamespaces()
 
-	// Step2: Translate all the metadata labels to Trireme Rules
-	containerPolicy, err := createPolicyRules(allRules, kubernetesNamespace)
+	containerPolicy, err := createPolicyRules(allRules, kubernetesNamespace, allNamespaces)
 	if err != nil {
 		return nil, err
 	}
@@ -240,12 +240,12 @@ func (k *KubernetesPolicy) podEventHandler(pod *api.Pod, eventType watch.EventTy
 func (k *KubernetesPolicy) namespaceEventHandler(namespace *api.Namespace, eventType watch.EventType) error {
 	switch eventType {
 	case watch.Added:
-		if k.cache.namespaceStatus(namespace.GetName()) {
+		if k.cache.isNamespaceActive(namespace.GetName()) {
 			// Namespace already activated
 			glog.V(2).Infof("Namespace %s Added. already active", namespace.Name)
 			return nil
 		}
-		if !isNamespacePolicyActive(namespace) {
+		if !isNamespaceNetworkPolicyActive(namespace) {
 			// Namespace doesn't have NetworkPolicies activated
 			glog.V(2).Infof("Namespace %s Added. doesn't have NetworkPolicies support. Not activating", namespace.Name)
 			return nil
@@ -254,14 +254,14 @@ func (k *KubernetesPolicy) namespaceEventHandler(namespace *api.Namespace, event
 		return k.activateNamespace(namespace)
 
 	case watch.Deleted:
-		if k.cache.namespaceStatus(namespace.GetName()) {
+		if k.cache.isNamespaceActive(namespace.GetName()) {
 			glog.V(2).Infof("Namespace %s Deleted. Deactivating", namespace.Name)
 			return k.deactivateNamespace(namespace)
 		}
 
 	case watch.Modified:
-		if isNamespacePolicyActive(namespace) {
-			if k.cache.namespaceStatus(namespace.GetName()) {
+		if isNamespaceNetworkPolicyActive(namespace) {
+			if k.cache.isNamespaceActive(namespace.GetName()) {
 				glog.V(2).Infof("Namespace %s Modified. already active", namespace.Name)
 				return nil
 			}
@@ -269,7 +269,7 @@ func (k *KubernetesPolicy) namespaceEventHandler(namespace *api.Namespace, event
 			return k.activateNamespace(namespace)
 		}
 
-		if k.cache.namespaceStatus(namespace.Name) {
+		if k.cache.isNamespaceActive(namespace.Name) {
 			glog.V(2).Infof("Namespace %s Modified. Deactivating", namespace.Name)
 			return k.deactivateNamespace(namespace)
 		}
