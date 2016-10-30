@@ -105,7 +105,7 @@ func generateNamespacekvo(namespace string) []policy.KeyValueOperator {
 	return []policy.KeyValueOperator{kvo}
 }
 
-func individualPodRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, namespace string) error {
+func addPodRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, namespace string) error {
 
 	for _, peer := range rule.From {
 
@@ -158,7 +158,7 @@ func individualPodRules(containerPolicy *policy.PUPolicy, rule *extensions.Netwo
 	return nil
 }
 
-func individualNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList) error {
+func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList) error {
 
 	matchedNamespaces := map[string]bool{}
 	for _, peer := range rule.From {
@@ -207,13 +207,16 @@ func logRules(containerPolicy *policy.PUPolicy) {
 
 // createPolicyRules populate the RuleDB of a PU based on the list
 // of IngressRules coming from Kubernetes.
-func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, kubernetesNamespace string, allNamespaces *api.NamespaceList) (*policy.PUPolicy, error) {
+func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList) (*policy.PUPolicy, error) {
 	containerPolicy := policy.NewPUPolicy()
 
 	for _, rule := range *rules {
 		// Populate the clauses related to each individual rules.
-		if err := individualPodRules(containerPolicy, &rule, kubernetesNamespace); err != nil {
-			return nil, fmt.Errorf("Error creating policyRule: %s", err)
+		if err := addPodRules(containerPolicy, &rule, podNamespace); err != nil {
+			return nil, fmt.Errorf("Error creating pod policyRule: %s", err)
+		}
+		if err := addNamespaceRules(containerPolicy, &rule, podNamespace, allNamespaces); err != nil {
+			return nil, fmt.Errorf("Error creating pod policyRule: %s", err)
 		}
 	}
 	logRules(containerPolicy)
