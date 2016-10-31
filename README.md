@@ -1,6 +1,6 @@
 # trireme-kubernetes
 
-Trireme integration with Kubernetes
+Trireme integration with Kubernetes.
 
 ## How to use it ?
 
@@ -13,7 +13,7 @@ As of today, the agent reads the .kubectl file in your home directory, and will 
 ## What policies does it implement ?
 
 It implements the complete set  provisioned Kubernetes-policies. The Trireme code allows for additional
-controls, that are currently not supported in the Kubernetes API. 
+controls, that are currently not supported in the Kubernetes API.
 If you don't have any policies provisioned, your newly activated pods will be unreachable.
 
 ## How can I try it ?
