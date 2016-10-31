@@ -7,8 +7,8 @@ RUN apt-get update && apt-get install -y \
     iptables \
 && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-ADD app /opt/trireme-kubernetes/
-ADD run.sh /opt/trireme-kubernetes/run.sh
+ADD trireme-kubernetes /opt/trireme/trireme-kubernetes
+ADD run.sh /opt/trireme/run.sh
 
-WORKDIR /opt/trireme-kubernetes
+WORKDIR /opt/trireme
 CMD ./run.sh
