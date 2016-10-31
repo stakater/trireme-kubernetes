@@ -13,14 +13,17 @@ spec:
       hostNetwork: true
       containers:
         -  name: trireme
-           image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/trireme-kubernetes
+           image: aporeto/trireme-kubernetes
            env:
              - name: SYNC_EXISTING_CONTAINERS
                value: "true"
-             - name: TRIREME_PKI
-               value: /var/trireme/
-             - name: TRIREME_CERT
-               value: TRIREME
+             - name: TRIREME_AUTH_TYPE
+               value: PSK
+             - name: TRIREME_PSK
+               valueFrom:
+                 secretKeyRef:
+                   name: mysecret
+                   key: username
              - name: KUBERNETES_NODE
                valueFrom:
                  fieldRef:
@@ -31,13 +34,8 @@ spec:
              - mountPath: /var/run/docker.sock
                name: dockersock
                readOnly: false
-             - mountPath: /var/trireme
-               name: triremecerts
 
       volumes:
         - name: dockersock
           hostPath:
             path: /var/run/docker.sock
-        - name: triremecerts
-          secret:
-            secretName: trireme-certs

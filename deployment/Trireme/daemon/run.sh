@@ -1,0 +1,13 @@
+SYNC_EXISTING_CONTAINERS="true"
+TRIREME_AUTH_TYPE="PSK"
+TRIREME_PSK="defaultPSKkey"
+KUBERNETES_NODE="127.0.0.1"
+TRIREME_PKI_MOUNT="/var/trireme/"
+TRIREME_CERT_ANNOTATION="TRIREME"
+
+./trireme-kubernetes --logtostderr=1 --v=5  \
+  --node $KUBERNETES_NODE \
+  --annotation $TRIREME_CERT_ANNOTATION \
+  --auth $TRIREME_AUTH_TYPE \
+  --psk $TRIREME_PSK \
+  --syncexisting $SYNC_EXISTING_CONTAINERS
