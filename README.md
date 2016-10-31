@@ -3,24 +3,21 @@
 [![Twitter URL](https://img.shields.io/twitter/url/http/shields.io.svg?style=social&style=flat-square)](https://twitter.com/aporeto_trireme) [![Slack URL](https://img.shields.io/badge/slack-up-green.svg)](https://triremehq.slack.com/messages/general/) [![License](https://img.shields.io/badge/license-GPL--2.0-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html) [![Documentation](https://img.shields.io/badge/docs-godoc-blue.svg)](https://godoc.org/github.com/aporeto-inc/trireme-kubernetes)
 
 Integration with the NetworkPolicy framework from Kubernetes.
-Kubernetes defines a beta API for NetworkPolicies. More info over here:
+Kubernetes defines an API for NetworkPolicies. More info over here:
 
 * http://kubernetes.io/docs/user-guide/networkpolicies/
 * http://kubernetes.io/docs/api-reference/extensions/v1beta1/definitions/#_v1beta1_networkpolicy
 
-Kubernetes doesn't enforce natively those NetworkPolicies and require another library/solution to perform the actual policing.
-A couple SDN solutions implement the K8S network-policies today, relying typically on a Control plane and controller to achieve the policy enforcing.
-This Kubernetes-Integration doesn't rely on any complex control-plane or setup. All the enforcing is performed directly on the Dataplane (more info at  [Trireme ](https://github.com/aporeto-inc/trireme) )
+Kubernetes does not enforce natively those NetworkPolicies and requires another library/solution to perform the actual enforcement.
+The implementation of network policy with Trireme does not rely on any complex control-plane or setup. Enforcement is performed directly on every minion without any shared state (more info at  [Trireme ](https://github.com/aporeto-inc/trireme) )
 
-Kubernetes NetworkPolicies are entirely based on `labels` and `selectors` to hide all the actual IPs for the different endpoints. Trireme is using that exact same approach. IP information is irrelevant, Everything is based on labels.
+Kubernetes NetworkPolicies are entirely based on `labels` and `selectors` to hide all the actual IPs for the different endpoints. Trireme is using that exact same approach. IP information is irrelevant even for enforcement, and everything is based on labels.
 
+In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is to launch the Trireme run-time on each minion.
 
+## Run-Time deployment.
 
-In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is to launch an agent on each kubelet node.
-
-## Agent deployment.
-
-That agent can be launched as:
+That run-time can be launched as:
 
 * A Trireme in-cluster pod by using a `daemonSet`. (recommended deployment)
 * A standalone agent/daemon on the node.
@@ -34,7 +31,7 @@ One of the key features of Trireme is the built-in authentication scheme for dif
 This cryptographic authentication ensures that every label set on a `pod` and used into the NetworkingPolicies rules is protected against man-in-the-middle type attacks.
 This authentication can be based on a full Public Key infrastructure (recommended) or on a PreSharedKey.
 
-* When using `PKI`, The PrivateKey and corresponding CA Cert must be available locally on the node. The agent uses the Private key for signing all the labels sent on the wire. The corresponding certificate is also published as an `annotation` on the node object in Kubernetes API. Each node retrieves the certificate corresponding to all the other nodes by watching the node annotations.
+* When using `PKI`, The PrivateKey and corresponding CA certificate must be available locally on the node. The run-time uses the Private key for signing all the labels sent on the wire. The corresponding certificate is also published as an `annotation` on the node object in Kubernetes API and can be pre-distributed through the control plane. Each node retrieves the certificate corresponding to all the other nodes by watching the node annotations. (this is optional).
 * For `PreSharedKey` , the key must be available as an  environment variable. If using the `daemonSet` method for deployment, a Kubernetes secret is the safest and simplest method to share a PSK for the whole cluster.
 
 ## Try it!
