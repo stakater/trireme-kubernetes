@@ -6,16 +6,16 @@ import (
 )
 
 // Cache keeps all the state needed for the integration.
-type Cache struct {
-	// namespaceActivation
+type cache struct {
+	// namespaceActivation is a map between the namespaceName and the corresponding Watcher struct.
 	namespaceActivation map[string]*NamespaceWatcher
-	// contextIDCache keeps a mapping between a POD name and the corresponding contextID
+	// contextIDCache keeps a mapping between a POD/Namespace name and the corresponding contextID from Trireme.
 	contextIDCache map[string]string
 	sync.RWMutex
 }
 
-func newCache() *Cache {
-	return &Cache{
+func newCache() *cache {
+	return &cache{
 		namespaceActivation: map[string]*NamespaceWatcher{},
 		contextIDCache:      map[string]string{},
 	}
@@ -25,14 +25,14 @@ func kubePodIdentifier(podName string, podNamespace string) string {
 	return podNamespace + "/" + podName
 }
 
-func (c *Cache) addPodToCache(contextID string, podName string, podNamespace string) {
+func (c *cache) addPodToCache(contextID string, podName string, podNamespace string) {
 	c.Lock()
 	defer c.Unlock()
 	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
 	c.contextIDCache[kubeIdentifier] = contextID
 }
 
-func (c *Cache) contextIDByPodName(podName string, podNamespace string) (string, error) {
+func (c *cache) contextIDByPodName(podName string, podNamespace string) (string, error) {
 	c.Lock()
 	defer c.Unlock()
 	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
@@ -43,7 +43,7 @@ func (c *Cache) contextIDByPodName(podName string, podNamespace string) (string,
 	return contextID, nil
 }
 
-func (c *Cache) deleteFromCacheByPodName(podName string, podNamespace string) error {
+func (c *cache) deleteFromCacheByPodName(podName string, podNamespace string) error {
 	c.Lock()
 	defer c.Unlock()
 	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
@@ -55,16 +55,22 @@ func (c *Cache) deleteFromCacheByPodName(podName string, podNamespace string) er
 	return nil
 }
 
-func (c *Cache) getNamespaceWatcher(namespace string) (*NamespaceWatcher, bool) {
+func (c *cache) getNamespaceWatcher(namespace string) (*NamespaceWatcher, bool) {
+	c.Lock()
+	defer c.Unlock()
 	namespaceWatcher, ok := c.namespaceActivation[namespace]
 	return namespaceWatcher, ok
 }
 
-func (c *Cache) activateNamespaceWatcher(namespace string, namespaceWatcher *NamespaceWatcher) {
+func (c *cache) activateNamespaceWatcher(namespace string, namespaceWatcher *NamespaceWatcher) {
+	c.Lock()
+	defer c.Unlock()
 	c.namespaceActivation[namespace] = namespaceWatcher
 }
 
-func (c *Cache) deactivateNamespaceWatcher(namespace string) {
+func (c *cache) deactivateNamespaceWatcher(namespace string) {
+	c.Lock()
+	defer c.Unlock()
 	namespaceWatcher, ok := c.namespaceActivation[namespace]
 	if !ok {
 		return
@@ -74,10 +80,9 @@ func (c *Cache) deactivateNamespaceWatcher(namespace string) {
 	delete(c.namespaceActivation, namespace)
 }
 
-func (c *Cache) namespaceStatus(namespace string) bool {
+func (c *cache) isNamespaceActive(namespace string) bool {
+	c.Lock()
+	defer c.Unlock()
 	_, ok := c.namespaceActivation[namespace]
-	if !ok {
-		return false
-	}
-	return true
+	return ok
 }

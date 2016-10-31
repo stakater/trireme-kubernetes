@@ -8,6 +8,7 @@ import (
 
 	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 	"github.com/aporeto-inc/trireme/enforcer"
+
 	"github.com/golang/glog"
 )
 
