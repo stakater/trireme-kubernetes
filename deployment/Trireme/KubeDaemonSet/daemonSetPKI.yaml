@@ -1,0 +1,45 @@
+apiVersion: extensions/v1beta1
+kind: DaemonSet
+metadata:
+  labels:
+    app: aporeto
+  name: trireme
+spec:
+  template:
+    metadata:
+      labels:
+        app: trireme
+    spec:
+      hostNetwork: true
+      containers:
+        -  name: trireme
+           image: 926088932149.dkr.ecr.us-west-2.amazonaws.com/trireme-kubernetes
+           env:
+             - name: SYNC_EXISTING_CONTAINERS
+               value: "true"
+             - name: TRIREME_AUTH_TYPE
+               value: PKI
+             - name: TRIREME_PKI_MOUNT
+               value: /var/trireme/
+             - name: TRIREME_CERT_ANNOTATION
+               value: TRIREME
+             - name: KUBERNETES_NODE
+               valueFrom:
+                 fieldRef:
+                   fieldPath: spec.host
+           securityContext:
+             privileged: true
+           volumeMounts:
+             - mountPath: /var/run/docker.sock
+               name: dockersock
+               readOnly: false
+             - mountPath: /var/trireme
+               name: triremecerts
+
+      volumes:
+        - name: dockersock
+          hostPath:
+            path: /var/run/docker.sock
+        - name: triremecerts
+          hostPath:
+            path: /var/trireme

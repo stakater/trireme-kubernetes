@@ -26,7 +26,7 @@ That agent can be launched as:
 * A standalone agent/daemon on the node.
 * A container managed outside Kubernetes.
 
-More details on those [options ](https://github.com/aporeto-inc/trireme-kubernetes/tree/master/deployment)
+More details on those [options and delpoyment configuration](https://github.com/aporeto-inc/trireme-kubernetes/tree/master/deployment)
 
 ## Node authentication
 
