@@ -86,7 +86,7 @@ func LoadConfig() *TriKubeConfig {
 		config.KubeNodeName = os.Getenv(EnvNodeName)
 	}
 	if config.KubeNodeName == "" {
-		panic("Couldn't load NodeName")
+		panic("Couldn't load NodeName. Ensure Kubernetes Nodename is given as a parameter ( -node) if not running in a KubernetesCluster ")
 	}
 
 	config.NodeAnnotationKey = *flagNodeAnnotationKey

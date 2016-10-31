@@ -71,7 +71,6 @@ func isNamespaceNetworkPolicyActive(namespace *api.Namespace) bool {
 	if !ok {
 		return false
 	}
-	fmt.Printf("Got %s  ", value)
 	networkPolicyAnnotation := &NamespaceNetworkPolicy{}
 	if err := json.Unmarshal([]byte(value), networkPolicyAnnotation); err != nil {
 		return false
@@ -99,6 +98,7 @@ func (k *KubernetesPolicy) ResolvePolicy(contextID string, runtimeGetter policy.
 	podName := runtimeGetter.Tags()[KubernetesPodName]
 	podNamespace := runtimeGetter.Tags()[KubernetesPodNamespace]
 	k.cache.addPodToCache(contextID, podName, podNamespace)
+	glog.V(2).Infof("Create pod Policy for %s , namespace %s ", podName, podNamespace)
 	return k.resolvePodPolicy(podName, podNamespace)
 }
 

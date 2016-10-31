@@ -182,6 +182,10 @@ func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.Networ
 		}
 		allowedNamespaces = append(allowedNamespaces, namespace)
 	}
+	// No need to add the Namespace clause if no namespaces were matched.
+	if len(allowedNamespaces) == 0 {
+		return nil
+	}
 	clause := policy.KeyValueOperator{
 		Key:      "@namespace",
 		Operator: policy.Equal,
