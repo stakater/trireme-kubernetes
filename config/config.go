@@ -11,24 +11,34 @@ const EnvNodeName = "KUBERNETES_NODE"
 
 // EnvNodeAnnotationKey is the env variable used as a key for the annotation containing the
 // node cert.
-const EnvNodeAnnotationKey = "TRIREME_CERT"
+const EnvNodeAnnotationKey = "TRIREME_CERT_ANNOTATION"
 
 // DefaultNodeAnnotationKey is the env variable used as a key for the annotation containing the
 // node cert.
 const DefaultNodeAnnotationKey = "TRIREME"
 
+// EnvAuthType is used as the Auth Type.
+const EnvAuthType = "TRIREME_AUTH_TYPE"
+
+// DefaultAuthType is the env variable used as a key for the annotation containing the
+// node cert.
+const DefaultAuthType = "PSK"
+
 // EnvPKIDirectory is the env. variable name for the location of the directory where
 // the PKI files are expected to be found.
-const EnvPKIDirectory = "TRIREME_PKI"
+const EnvPKIDirectory = "TRIREME_PKI_MOUNT"
 
 // DefaultPKIDirectory is the directory where the PEMs are mounted.
 const DefaultPKIDirectory = "/var/trireme/"
 
+// EnvTriremePSK is used as the default PSK for trireme if not overriden by the user.
+const EnvTriremePSK = "TRIREME_PSK"
+
 // DefaultTriremePSK is used as the default PSK for trireme if not overriden by the user.
 const DefaultTriremePSK = "Trireme"
 
-// KubeConfigLocation is the default location of the KubeConfig file.
-const KubeConfigLocation = "/.kube/config"
+// DefaultKubeConfigLocation is the default location of the KubeConfig file.
+const DefaultKubeConfigLocation = "/.kube/config"
 
 // EnvSyncExistingContainers is the env variable that will define if you sync the existing containers.
 const EnvSyncExistingContainers = "SYNC_EXISTING_CONTAINERS"
@@ -39,6 +49,7 @@ const DefaultSyncExistingContainers = true
 // TriKubeConfig maintains the Configuration of Kubernetes Integration
 type TriKubeConfig struct {
 	KubeEnv               bool
+	AuthType              string
 	KubeNodeName          string
 	NodeAnnotationKey     string
 	PKIDirectory          string
@@ -61,7 +72,9 @@ func LoadConfig() *TriKubeConfig {
 
 	var flagNodeName = flag.String("node", "", "Node name in Kubernetes")
 	var flagNodeAnnotationKey = flag.String("annotation", "", "Trireme Node Annotation key in Kubernetes")
+	var flagAuthType = flag.String("auth", "", "Authentication type: PKI/PSK")
 	var flagPKIDirectory = flag.String("pki", "", "Directory where the Trireme PKIs are")
+	var flagPSK = flag.String("psk", "", "PSK to use")
 	var flagKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kubernetes")
 	var flagtSyncExistingContainers = flag.Bool("syncexisting", true, "Sync existing containers")
 
@@ -74,7 +87,7 @@ func LoadConfig() *TriKubeConfig {
 		config.KubeEnv = false
 		config.KubeConfigLocation = *flagKubeConfigLocation
 		if config.KubeConfigLocation == "" {
-			config.KubeConfigLocation = os.Getenv("HOME") + KubeConfigLocation
+			config.KubeConfigLocation = os.Getenv("HOME") + DefaultKubeConfigLocation
 		}
 	} else {
 		config.KubeEnv = true
@@ -89,20 +102,45 @@ func LoadConfig() *TriKubeConfig {
 		panic("Couldn't load NodeName. Ensure Kubernetes Nodename is given as a parameter ( -node) if not running in a KubernetesCluster ")
 	}
 
-	config.NodeAnnotationKey = *flagNodeAnnotationKey
-	if config.NodeAnnotationKey == "" {
-		config.NodeAnnotationKey = os.Getenv(EnvNodeAnnotationKey)
+	config.AuthType = *flagAuthType
+	if config.AuthType == "" {
+		config.AuthType = os.Getenv(EnvNodeAnnotationKey)
 	}
-	if config.NodeAnnotationKey == "" {
-		config.NodeAnnotationKey = DefaultNodeAnnotationKey
+	if config.AuthType == "" {
+		config.AuthType = DefaultAuthType
+	}
+	if config.AuthType != "PSK" && config.AuthType != "PKI" {
+		config.AuthType = DefaultAuthType
 	}
 
-	config.PKIDirectory = *flagPKIDirectory
-	if config.PKIDirectory == "" {
-		config.PKIDirectory = os.Getenv(EnvPKIDirectory)
+	// If PSK,load the PSK.
+	if config.AuthType == "PSK" {
+		config.TriremePSK = *flagPSK
+		if config.TriremePSK == "" {
+			config.TriremePSK = os.Getenv(EnvTriremePSK)
+		}
+		if config.TriremePSK == "" {
+			config.TriremePSK = DefaultTriremePSK
+		}
 	}
-	if config.PKIDirectory == "" {
-		config.PKIDirectory = DefaultPKIDirectory
+
+	// Is PKI, Load the Certs and The annotation key.
+	if config.AuthType == "PKI" {
+		config.PKIDirectory = *flagPKIDirectory
+		if config.PKIDirectory == "" {
+			config.PKIDirectory = os.Getenv(EnvPKIDirectory)
+		}
+		if config.PKIDirectory == "" {
+			config.PKIDirectory = DefaultPKIDirectory
+		}
+
+		config.NodeAnnotationKey = *flagNodeAnnotationKey
+		if config.NodeAnnotationKey == "" {
+			config.NodeAnnotationKey = os.Getenv(EnvNodeAnnotationKey)
+		}
+		if config.NodeAnnotationKey == "" {
+			config.NodeAnnotationKey = DefaultNodeAnnotationKey
+		}
 	}
 
 	config.TriremePSK = DefaultTriremePSK

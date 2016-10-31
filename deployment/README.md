@@ -59,10 +59,10 @@ some helpers are also provided:
 * For PSK: createPSK.sh assists with the creation of the PSK and Kubernetes secret provisioning.
 * For PKI: createPKI.sh assists with the generation of certificate and moves them to `/var/trireme`. This needs to be performed with the same CA on each node part of the cluster. This script is only an example to get started quickly.
 
-To deloy the daemonSet:
+To deploy the daemonSet:
 
 ```
-kubectl create -f
+kubectl create -f deployment/Trireme/KubeDaemonSet/daemonSetPSK.yaml
 ```
 
 ## Docker deployment outside Kubernetes.
@@ -71,7 +71,15 @@ Another popular way to deploy the agent is to use Docker directly. You would typ
 An helper script is provided here. The environment variables are the same as the ones defined for Kubernetes.
 When running the agent directly on docker, you need to keep track of your deployment accross your whole Kubernetes cluster.
 
+```
+deployment/Trireme/docker/docker.sh
+```
+
 ## deployment as a daemon/process directly on the host.
 
 Finally, another option is to directly launch the binary on the host.
 a helper script is provided here with the same configuration variable as in Kubernetes.
+
+```
+deployment/Trireme/docker/run.sh
+```

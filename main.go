@@ -31,20 +31,25 @@ func main() {
 		return
 	}
 
-	// Naive implementation for PKI:
-	// Trying to load the PKI infra from Kube Secret.
-	// If successful, use it, if not, revert to SharedSecret.
-	pki, err := auth.LoadPKI(config.PKIDirectory)
 	var trireme trireme.Trireme
 	var monitor monitor.Monitor
 	var publicKeyAdder enforcer.PublicKeyAdder
 
-	if err != nil {
+	if config.AuthType == "PSK" {
 		// Starting PSK
-		glog.V(2).Infof("Error reading KubeSecret: %s . Falling back to PSK", err)
+		glog.V(2).Infof("Starting Trireme PSK")
 		trireme, monitor = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, networks, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK))
 
-	} else {
+	}
+	if config.AuthType == "PKI" {
+		// Starting PKI
+		glog.V(2).Infof("Starting Trireme PKI")
+		// Load the PKI Certs/Keys.
+		pki, err := auth.LoadPKI(config.PKIDirectory)
+		if err != nil {
+			fmt.Printf("Error loading Certificates for PKI Trireme, exiting: %s \n", err)
+			return
+		}
 		// Starting PKI
 		trireme, monitor, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, networks, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
 
