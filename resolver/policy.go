@@ -124,6 +124,8 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get Kubernetes labels for container %s : %v", kubernetesPod, err)
 	}
+	// Updating the cacheEntry with the PodLabels.
+	k.cache.updatePodLabels(kubernetesPod, kubernetesNamespace, podLabels)
 	// adding the namespace as an extra label.
 	podLabels["@namespace"] = kubernetesNamespace
 
@@ -222,13 +224,21 @@ func (k *KubernetesPolicy) podEventHandler(pod *api.Pod, eventType watch.EventTy
 		if err != nil {
 			return fmt.Errorf("Error for PodDelete: %s ", err)
 		}
-		/*	case watch.Modified:
-			glog.V(5).Infof("New K8S pod Modified detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
-			err := k.updatePodPolicy(pod)
-			if err != nil {
-				return fmt.Errorf("Failed UpdatePolicy on ModifiedPodEvent: %s", err)
-			}
-		*/
+	case watch.Modified:
+		glog.V(5).Infof("New K8S pod Modified detected: %s namespace: %s", pod.GetName(), pod.GetNamespace())
+
+		latest, err := k.cache.isLatestLabelSet(pod.GetName(), pod.GetNamespace(), pod.GetLabels())
+		if err != nil {
+			return fmt.Errorf("Failed to get pod in cache on ModifiedPodEvent: %s", err)
+		}
+		if latest {
+			glog.V(5).Infof("No modified labels for Pod: %s namespace: %s", pod.GetName(), pod.GetNamespace())
+			return nil
+		}
+		err = k.updatePodPolicy(pod)
+		if err != nil {
+			return fmt.Errorf("Failed UpdatePolicy on ModifiedPodEvent: %s", err)
+		}
 	case watch.Error:
 		return fmt.Errorf("Error on pod event channel ")
 	}
