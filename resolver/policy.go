@@ -237,7 +237,7 @@ func (k *KubernetesPolicy) podEventHandler(pod *api.Pod, eventType watch.EventTy
 		}
 		err = k.updatePodPolicy(pod)
 		if err != nil {
-			return fmt.Errorf("Failed UpdatePolicy on ModifiedPodEvent: %s", err)
+			return fmt.Errorf("Failed UpdatePolicy on ModifiedPodEvent. Probably related to ongoing delete: %s", err)
 		}
 	case watch.Error:
 		return fmt.Errorf("Error on pod event channel ")
