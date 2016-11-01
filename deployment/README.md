@@ -5,6 +5,7 @@
 This is the recommended deployment method. The Kubernetes `daemonSet` ensures that one agent (as a system pod) runs on every node part of the cluster. As the Trireme agent runs as `privileged: true` and into the Host network, your cluster must accept to run privileged containers.
 The [provided ](https://github.com/aporeto-inc/trireme) `daemonSet` yaml  should almost work out of the box.
 Two version of the daemonSet are provided. One for using PSK (simpler) and one for PKI (require certificate generation, but recommended).
+In order to make this deployment work, your Kubernetes cluster must support the spec.host downward API.
 The following env variables need to be adapted out of the provided daemonSet:
 
 * For the PSK Version:

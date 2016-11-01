@@ -11,9 +11,9 @@ Kubernetes defines an API for NetworkPolicies. More info over here:
 Kubernetes does not enforce natively those NetworkPolicies and requires another library/solution to perform the actual enforcement.
 The implementation of network policy with Trireme does not rely on any complex control-plane or setup. Enforcement is performed directly on every minion without any shared state (more info at  [Trireme ](https://github.com/aporeto-inc/trireme) )
 
-Kubernetes NetworkPolicies are entirely based on `labels` and `selectors` to hide all the actual IPs for the different endpoints. Trireme is using that exact same approach. IP information is irrelevant even for enforcement, and everything is based on labels.
+Kubernetes NetworkPolicies are entirely based on `labels` and `selectors` to hide all the actual IPs for the different endpoints. Trireme is using that exact same approach. IP information is irrelevant even for enforcement. Everything is based on labels.
 
-In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is to launch the Trireme run-time on each minion.
+In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is to launch the Trireme run-time on each node.
 
 ## Run-Time deployment.
 
@@ -23,7 +23,7 @@ That run-time can be launched as:
 * A standalone agent/daemon on the node.
 * A container managed outside Kubernetes.
 
-More details on those [options and delpoyment configuration](https://github.com/aporeto-inc/trireme-kubernetes/tree/master/deployment)
+More details on those [options and deployment configuration](https://github.com/aporeto-inc/trireme-kubernetes/tree/master/deployment)
 
 ## Node authentication
 
