@@ -15,6 +15,8 @@ Kubernetes NetworkPolicies are entirely based on `labels` and `selectors` to hid
 
 In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is to launch the Trireme run-time on each node.
 
+![Kubernetes cluster with Trireme](docs/pods.png)
+
 ## Run-Time deployment.
 
 That run-time can be launched as:
