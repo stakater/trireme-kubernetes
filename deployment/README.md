@@ -19,13 +19,15 @@ env:
   - name: TRIREME_PSK
     valueFrom:
       secretKeyRef:
-        name: mysecret
-        key: username
+        name: trireme
+        key: triremepsk
   - name: KUBERNETES_NODE
     valueFrom:
       fieldRef:
         fieldPath: spec.host
 ```
+
+The DaemonSet expects to find the PSK in the Kube secret `trireme` with id `triremepsk`
 
 * For the PKI Version:
 
@@ -44,7 +46,7 @@ env:
       fieldRef:
         fieldPath: spec.host
 ```
-
+The DaemonSet expects to find the PKI files on a local directory `/var/trireme`
 
 
 * `SYNC_EXISTING_CONTAINERS` is `true` by default. Defines if already running pods also need to be policed.
@@ -58,7 +60,7 @@ Typically, the only values that you should have to change are the ones related t
 
 some helpers are also provided:
 * For PSK: createPSK.sh assists with the creation of the PSK and Kubernetes secret provisioning.
-* For PKI: createPKI.sh assists with the generation of certificate and moves them to `/var/trireme`. This needs to be performed with the same CA on each node part of the cluster. This script is only an example to get started quickly.
+* For PKI: createPKI.sh assists with the generation of certificate and moves them to `/var/trireme`. This needs to be performed with the same CA on each node part of the cluster. This script is only an example to get started quickly that will generate certificate for one single node. If you need to generate certificates for multiple nodes,  you will need to manage a central CA and move the certificate for each node to `/var/trireme`.
 
 To deploy the daemonSet:
 
