@@ -143,8 +143,6 @@ func LoadConfig() *TriKubeConfig {
 		}
 	}
 
-	config.TriremePSK = DefaultTriremePSK
-
 	if os.Getenv(EnvSyncExistingContainers) == "" {
 		config.ExistingContainerSync = *flagtSyncExistingContainers
 	}

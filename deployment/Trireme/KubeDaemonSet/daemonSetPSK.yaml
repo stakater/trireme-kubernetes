@@ -22,8 +22,8 @@ spec:
              - name: TRIREME_PSK
                valueFrom:
                  secretKeyRef:
-                   name: mysecret
-                   key: username
+                   name: trireme
+                   key: triremepsk
              - name: KUBERNETES_NODE
                valueFrom:
                  fieldRef:
