@@ -245,3 +245,11 @@ func allowAllPolicy() *policy.PUPolicy {
 
 	return containerPolicy
 }
+
+func notInfraContainerPolicy() *policy.PUPolicy {
+	containerPolicy := policy.NewPUPolicy()
+	containerPolicy.PolicyIPs = []string{""}
+	containerPolicy.TriremeAction = policy.AllowAll
+
+	return containerPolicy
+}

@@ -12,6 +12,7 @@ import (
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme/configurator"
 	"github.com/aporeto-inc/trireme/enforcer"
+	"github.com/aporeto-inc/trireme/enforcer/tokens"
 	"github.com/aporeto-inc/trireme/monitor"
 
 	"github.com/golang/glog"
@@ -34,6 +35,12 @@ func main() {
 	var trireme trireme.Trireme
 	var monitor monitor.Monitor
 	var publicKeyAdder enforcer.PublicKeyAdder
+
+	// Checking statically if the Node name is not more than the maximum ServerID supported in the token package.
+	if len(config.KubeNodeName) > tokens.MaxServerName {
+		config.KubeNodeName = config.KubeNodeName[:tokens.MaxServerName]
+		fmt.Println(config.KubeNodeName)
+	}
 
 	if config.AuthType == "PSK" {
 		// Starting PSK

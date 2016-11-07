@@ -86,13 +86,35 @@ func (c *Client) PodRules(podName string, namespace string) (*[]extensions.Netwo
 	return allRules, nil
 }
 
-// PodLabels returns the list of all label associated with a pod.
+// PodLabels returns the list of all labels associated with a pod.
 func (c *Client) PodLabels(podName string, namespace string) (map[string]string, error) {
 	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
 	if err != nil {
 		return nil, fmt.Errorf("error getting Kubernetes labels for pod %v : %v ", podName, err)
 	}
 	return targetPod.GetLabels(), nil
+}
+
+// PodIP returns the pod's IP.
+func (c *Client) PodIP(podName string, namespace string) (string, error) {
+	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
+	if err != nil {
+		return "", fmt.Errorf("error getting Kubernetes IP for pod %v : %v ", podName, err)
+	}
+	return targetPod.Status.PodIP, nil
+}
+
+// PodLabelsAndIP returns the list of all labels associated with a pod as well as the Pod's IP.
+func (c *Client) PodLabelsAndIP(podName string, namespace string) (map[string]string, string, error) {
+	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
+	if err != nil {
+		return nil, "", fmt.Errorf("error getting Kubernetes labels & IP for pod %v : %v ", podName, err)
+	}
+	ip := targetPod.Status.PodIP
+	if targetPod.Status.PodIP == targetPod.Status.HostIP {
+		ip = "host"
+	}
+	return targetPod.GetLabels(), ip, nil
 }
 
 // LocalPods return a PodList with all the pods scheduled on the local node

@@ -25,6 +25,9 @@ const KubernetesPodNamespace = "io.kubernetes.pod.namespace"
 // KubernetesContainerName is the label used by Docker for the K8S container name.
 const KubernetesContainerName = "io.kubernetes.container.name"
 
+// KubernetesInfraContainerName is the name of the infra POD.
+const KubernetesInfraContainerName = "POD"
+
 // KubernetesNetworkPolicyAnnotationID is the string used as an annotation key
 // to define if a namespace should have the networkpolicy framework enabled.
 const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-policy"
@@ -85,6 +88,11 @@ func isNamespaceNetworkPolicyActive(namespace *api.Namespace) bool {
 	return false
 }
 
+// isNamespaceKubeSystem returns true if the namespace is kube-system
+func isNamespaceKubeSystem(namespace string) bool {
+	return namespace == "kube-system"
+}
+
 // SetPolicyUpdater registers the interface used for updating Policies explicitely.
 func (k *KubernetesPolicy) SetPolicyUpdater(p trireme.PolicyUpdater) error {
 	k.policyUpdater = p
@@ -95,8 +103,23 @@ func (k *KubernetesPolicy) SetPolicyUpdater(p trireme.PolicyUpdater) error {
 // The policy for the PU will be based on the defined
 // Kubernetes NetworkPolicies on the Pod to which the PU belongs.
 func (k *KubernetesPolicy) ResolvePolicy(contextID string, runtimeGetter policy.RuntimeReader) (*policy.PUPolicy, error) {
-	podName := runtimeGetter.Tags()[KubernetesPodName]
-	podNamespace := runtimeGetter.Tags()[KubernetesPodNamespace]
+
+	// Only the Infra Container should be policed. All the others should be AllowAll.
+	// The Infra container can be found by checking env. variable.
+	value, ok := runtimeGetter.Tag(KubernetesContainerName)
+	if !ok || value != KubernetesInfraContainerName {
+		// return AllowAll
+		return notInfraContainerPolicy(), nil
+	}
+
+	podName, ok := runtimeGetter.Tag(KubernetesPodName)
+	if !ok {
+		return nil, fmt.Errorf("Error getting Kubernetes Pod name")
+	}
+	podNamespace, ok := runtimeGetter.Tag(KubernetesPodNamespace)
+	if !ok {
+		return nil, fmt.Errorf("Error getting Kubernetes Pod namespace")
+	}
 	k.cache.addPodToCache(contextID, podName, podNamespace)
 	glog.V(2).Infof("Create pod Policy for %s , namespace %s ", podName, podNamespace)
 	return k.resolvePodPolicy(podName, podNamespace)
@@ -118,40 +141,55 @@ func (k *KubernetesPolicy) HandleDestroyPU(contextID string) error {
 
 // resolvePodPolicy generates the Trireme Policy for a specific Kube Pod and Namespace.
 func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesNamespace string) (*policy.PUPolicy, error) {
-	// Adding all the specific Kubernetes K,V from the Pod.
-	// Iterate on PodLabels and add them as tags.
-	podLabels, err := k.KubernetesClient.PodLabels(kubernetesPod, kubernetesNamespace)
-	if err != nil {
-		return nil, fmt.Errorf("Couldn't get Kubernetes labels for container %s : %v", kubernetesPod, err)
+
+	// We don't want to actiate anything from Kube-System.
+	if isNamespaceKubeSystem(kubernetesNamespace) {
+		return notInfraContainerPolicy(), nil
 	}
-	// Updating the cacheEntry with the PodLabels.
-	k.cache.updatePodLabels(kubernetesPod, kubernetesNamespace, podLabels)
-	// adding the namespace as an extra label.
-	podLabels["@namespace"] = kubernetesNamespace
+
+	// Query Kube API to get the Pod's label and IP.
+	podLabels, podIP, err := k.KubernetesClient.PodLabelsAndIP(kubernetesPod, kubernetesNamespace)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't get labels for pod %s : %v", kubernetesPod, err)
+	}
+
+	// If IP is empty, wait for an UpdatePodEvent with the Actual PodIP. Not ready to be activated now.
+	if podIP == "" || podIP == "host" || podLabels == nil {
+		return notInfraContainerPolicy(), nil
+	}
 
 	// Check if the Pod's namespace is activated.
 	if !k.cache.isNamespaceActive(kubernetesNamespace) {
 		// TODO: Find a way to tell to TRIREME Allow All ??
 		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll", kubernetesNamespace)
-		pupolicy := allowAllPolicy()
-		pupolicy.PolicyTags = podLabels
-		return pupolicy, nil
+		allowAllPuPolicy := allowAllPolicy()
+		// adding the namespace as an extra label.
+		podLabels["@namespace"] = kubernetesNamespace
+		allowAllPuPolicy.PolicyTags = podLabels
+		allowAllPuPolicy.PolicyIPs = []string{podIP}
+		return allowAllPuPolicy, nil
 	}
 
+	// Updating the cacheEntry with the PodLabels.
+	k.cache.updatePodLabels(kubernetesPod, kubernetesNamespace, podLabels)
+	// adding the namespace as an extra label.
+	podLabels["@namespace"] = kubernetesNamespace
+
+	// Generating all the rules and generate policy.
 	allRules, err := k.KubernetesClient.PodRules(kubernetesPod, kubernetesNamespace)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get the NetworkPolicies for Pod %s : %s", kubernetesPod, err)
 	}
 	allNamespaces, err := k.KubernetesClient.AllNamespaces()
 
-	containerPolicy, err := createPolicyRules(allRules, kubernetesNamespace, allNamespaces)
+	puPolicy, err := createPolicyRules(allRules, kubernetesNamespace, allNamespaces)
 	if err != nil {
 		return nil, err
 	}
-	containerPolicy.PolicyTags = podLabels
+	puPolicy.PolicyTags = podLabels
+	puPolicy.PolicyIPs = []string{podIP}
 
-	// Step3: Done
-	return containerPolicy, nil
+	return puPolicy, nil
 }
 
 // updatePodPolicy updates (and replace) the policy of the pod given in parameter.
