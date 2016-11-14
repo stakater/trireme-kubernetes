@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 
@@ -181,6 +182,13 @@ func LoadConfig() *TriKubeConfig {
 
 func parseTriremeNets(nets string) ([]string, error) {
 	resultNets := strings.Fields(nets)
-	//TODO: Verify validity of result nets.
+
+	// Validation of parameter networks.
+	for _, network := range resultNets {
+		_, _, err := net.ParseCIDR(network)
+		if err != nil {
+			return nil, fmt.Errorf("Invalid CIDR: %s", err)
+		}
+	}
 	return resultNets, nil
 }
