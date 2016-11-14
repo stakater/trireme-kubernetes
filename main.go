@@ -38,7 +38,6 @@ func main() {
 	// Checking statically if the Node name is not more than the maximum ServerID supported in the token package.
 	if len(config.KubeNodeName) > tokens.MaxServerName {
 		config.KubeNodeName = config.KubeNodeName[:tokens.MaxServerName]
-		fmt.Println(config.KubeNodeName)
 	}
 
 	if config.AuthType == "PSK" {
@@ -69,6 +68,8 @@ func main() {
 		go certs.StartWatchingCerts()
 
 	}
+	// Register Trireme to the Policy.
+	kubernetesPolicy.SetPolicyUpdater(trireme)
 
 	// Start all the go routines.
 	trireme.Start()
