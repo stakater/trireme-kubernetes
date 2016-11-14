@@ -70,3 +70,10 @@ curl http://<BACKEND_IP>
 kubectl exec -it frontend /bin/bash
 curl http://<BACKEND_IP>
 ```
+
+## Prerequisites
+
+* Trireme requires bridged-based networking solutions for which we can redirect traffic to IPTables (Flannel, default docker networks, ...). We are working on a generic solution that allows any traffic backed by any networking vendor to always be redirected from the namespace to IPTables. We have tested with Flannel backed clusters and default Docker networking (bridged) backed clusters.
+* Trireme requires IPTables with access to the `Raw` and `Mangle` modules.
+* Trireme requires access to the Docker event API socket (`/var/run/docker.sock` by default)
+* Trireme requires privileged access.
