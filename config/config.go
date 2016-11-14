@@ -4,6 +4,9 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
+
+	"github.com/golang/glog"
 )
 
 // EnvNodeName is the default env. name used for the Kubernetes node name.
@@ -46,6 +49,12 @@ const EnvSyncExistingContainers = "SYNC_EXISTING_CONTAINERS"
 // DefaultSyncExistingContainers is the default value if you need to sync all existing containers.
 const DefaultSyncExistingContainers = true
 
+// EnvTriremeNets is the env. variable that will contain the value for the Trireme Networks.
+const EnvTriremeNets = "TRIREME_NETS"
+
+// DefaultTriremeNets is the default Kubernetes Network subnet.
+const DefaultTriremeNets = "10.0.0.0/8"
+
 // TriKubeConfig maintains the Configuration of Kubernetes Integration
 type TriKubeConfig struct {
 	KubeEnv               bool
@@ -55,6 +64,7 @@ type TriKubeConfig struct {
 	PKIDirectory          string
 	KubeConfigLocation    string
 	TriremePSK            string
+	TriremeNets           []string
 	ExistingContainerSync bool
 }
 
@@ -77,6 +87,7 @@ func LoadConfig() *TriKubeConfig {
 	var flagPSK = flag.String("psk", "", "PSK to use")
 	var flagKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kubernetes")
 	var flagtSyncExistingContainers = flag.Bool("syncexisting", true, "Sync existing containers")
+	var flagTriremeNets = flag.String("triremenets", "", "Subnets with Trireme endpoints.")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -153,5 +164,23 @@ func LoadConfig() *TriKubeConfig {
 		config.ExistingContainerSync = false
 	}
 
+	triremeNets := *flagTriremeNets
+	if triremeNets == "" {
+		triremeNets = os.Getenv(EnvTriremeNets)
+	}
+	if triremeNets == "" {
+		triremeNets = DefaultTriremeNets
+	}
+	parseResult, err := parseTriremeNets(triremeNets)
+	if err != nil {
+		glog.Fatalf("Error parsing TriremeNets: %s", err)
+	}
+	config.TriremeNets = parseResult
 	return config
+}
+
+func parseTriremeNets(nets string) ([]string, error) {
+	resultNets := strings.Fields(nets)
+	//TODO: Verify validity of result nets.
+	return resultNets, nil
 }

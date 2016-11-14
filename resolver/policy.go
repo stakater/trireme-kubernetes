@@ -41,7 +41,6 @@ type KubernetesPolicy struct {
 	cache             *cache
 	stopAll           chan bool
 	stopNamespaceChan chan bool
-	routineCount      int
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
@@ -54,7 +53,6 @@ func NewKubernetesPolicy(kubeconfig string, namespace string, nodename string) (
 	return &KubernetesPolicy{
 		cache:            newCache(),
 		KubernetesClient: client,
-		routineCount:     0,
 	}, nil
 }
 
@@ -141,11 +139,6 @@ func (k *KubernetesPolicy) HandleDestroyPU(contextID string) error {
 
 // resolvePodPolicy generates the Trireme Policy for a specific Kube Pod and Namespace.
 func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesNamespace string) (*policy.PUPolicy, error) {
-
-	// We don't want to actiate anything from Kube-System.
-	if isNamespaceKubeSystem(kubernetesNamespace) {
-		return notInfraContainerPolicy(), nil
-	}
 
 	// Query Kube API to get the Pod's label and IP.
 	podLabels, podIP, err := k.KubernetesClient.PodLabelsAndIP(kubernetesPod, kubernetesNamespace)

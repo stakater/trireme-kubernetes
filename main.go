@@ -20,7 +20,6 @@ import (
 
 func main() {
 	config := config.LoadConfig()
-	networks := []string{"0.0.0.0/0"}
 
 	glog.V(2).Infof("Config used: %+v ", config)
 
@@ -45,7 +44,7 @@ func main() {
 	if config.AuthType == "PSK" {
 		// Starting PSK
 		glog.V(2).Infof("Starting Trireme PSK")
-		trireme, monitor = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, networks, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK))
+		trireme, monitor = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK))
 
 	}
 	if config.AuthType == "PKI" {
@@ -58,7 +57,7 @@ func main() {
 			return
 		}
 		// Starting PKI
-		trireme, monitor, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, networks, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
+		trireme, monitor, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
 
 		// Sync the certs over all the Kubernetes Cluster.
 		// 1) Adds the localCert on the localNode annotation

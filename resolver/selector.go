@@ -201,6 +201,21 @@ func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.Networ
 	return nil
 }
 
+func addACLRules(containerPolicy *policy.PUPolicy) error {
+	iPruleTCP := policy.IPRule{
+		Address:  "0.0.0.0/0",
+		Port:     "*",
+		Protocol: "TCP",
+	}
+	iPruleUDP := policy.IPRule{
+		Address:  "0.0.0.0/0",
+		Port:     "*",
+		Protocol: "UDP",
+	}
+	containerPolicy.IngressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}
+	return nil
+}
+
 func logRules(containerPolicy *policy.PUPolicy) {
 	for i, selector := range containerPolicy.Rules {
 		for _, clause := range selector.Clause {
@@ -220,7 +235,10 @@ func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, podNamespac
 			return nil, fmt.Errorf("Error creating pod policyRule: %s", err)
 		}
 		if err := addNamespaceRules(containerPolicy, &rule, podNamespace, allNamespaces); err != nil {
-			return nil, fmt.Errorf("Error creating pod policyRule: %s", err)
+			return nil, fmt.Errorf("Error creating pod namespaceRule: %s", err)
+		}
+		if err := addACLRules(containerPolicy); err != nil {
+			return nil, fmt.Errorf("Error creating pod ACLRules: %s", err)
 		}
 	}
 	logRules(containerPolicy)
@@ -242,6 +260,18 @@ func allowAllPolicy() *policy.PUPolicy {
 	}
 	containerPolicy.Rules = append(containerPolicy.Rules, selector)
 	containerPolicy.TriremeAction = policy.AllowAll
+	iPruleTCP := policy.IPRule{
+		Address:  "0.0.0.0/0",
+		Port:     "*",
+		Protocol: "TCP",
+	}
+	iPruleUDP := policy.IPRule{
+		Address:  "0.0.0.0/0",
+		Port:     "*",
+		Protocol: "UDP",
+	}
+	containerPolicy.IngressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}
+	containerPolicy.EgressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}
 
 	return containerPolicy
 }

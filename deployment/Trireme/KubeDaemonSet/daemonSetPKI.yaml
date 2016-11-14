@@ -17,6 +17,8 @@ spec:
            env:
              - name: SYNC_EXISTING_CONTAINERS
                value: "true"
+             - name: TRIREME_NETS
+               value: 10.0.0.0/8
              - name: TRIREME_AUTH_TYPE
                value: PKI
              - name: TRIREME_PKI_MOUNT
