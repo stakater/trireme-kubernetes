@@ -187,7 +187,7 @@ func parseTriremeNets(nets string) ([]string, error) {
 	for _, network := range resultNets {
 		_, _, err := net.ParseCIDR(network)
 		if err != nil {
-			return nil, fmt.Errorf("Error while parsing network: %s", err)
+			return nil, fmt.Errorf("Invalid CIDR: %s", err)
 		}
 	}
 	return resultNets, nil
