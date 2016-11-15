@@ -8,6 +8,7 @@ import (
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 
+	"github.com/aporeto-inc/trireme/monitor"
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/golang/glog"
 
@@ -123,18 +124,9 @@ func (k *KubernetesPolicy) ResolvePolicy(contextID string, runtimeGetter policy.
 	return k.resolvePodPolicy(podName, podNamespace)
 }
 
-// HandleDeletePU  is called by Trireme for notification that a specific PU is deleted.
-// No action is taken based on this.
-func (k *KubernetesPolicy) HandleDeletePU(contextID string) error {
-	glog.V(5).Infof("Deleting Container %s", contextID)
-	return nil
-}
-
-// HandleDestroyPU  is called by Trireme for notification that a specific PU is destroyed.
-// No action is taken based on this.
-func (k *KubernetesPolicy) HandleDestroyPU(contextID string) error {
-	glog.V(6).Infof("destroying Container %s", contextID)
-	return nil
+// HandlePUEvent  is called by Trireme for notification that a specific PU got an event.
+func (k *KubernetesPolicy) HandlePUEvent(contextID string, eventType monitor.Event) {
+	glog.V(5).Infof("Container %s Event %s", contextID, eventType)
 }
 
 // resolvePodPolicy generates the Trireme Policy for a specific Kube Pod and Namespace.
