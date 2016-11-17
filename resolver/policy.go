@@ -93,8 +93,15 @@ func isNamespaceKubeSystem(namespace string) bool {
 	return namespace == "kube-system"
 }
 
-func isLatestLabels(oldLabels, newLabels labels.Set) bool {
-	return labels.Equals(oldLabels, newLabels)
+func isPolicyUpdateNeeded(oldPod, newPod *api.Pod) bool {
+	if !labels.Equals(oldPod.GetLabels(), newPod.GetLabels()) {
+		return true
+	}
+
+	if !(oldPod.Status.PodIP == newPod.Status.PodIP) {
+		return true
+	}
+	return false
 }
 
 // SetPolicyUpdater registers the interface used for updating Policies explicitely.
@@ -317,7 +324,7 @@ func (k *KubernetesPolicy) updatePod(oldPod, updatedPod *api.Pod) error {
 
 	glog.V(5).Infof("New K8S pod Modified detected: %s namespace: %s", updatedPod.GetName(), updatedPod.GetNamespace())
 
-	if isLatestLabels(oldPod.GetLabels(), updatedPod.GetLabels()) {
+	if isPolicyUpdateNeeded(oldPod, updatedPod) {
 		glog.V(5).Infof("No modified labels for Pod: %s namespace: %s", updatedPod.GetName(), updatedPod.GetNamespace())
 		return nil
 	}

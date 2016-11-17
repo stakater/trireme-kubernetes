@@ -51,7 +51,7 @@ func CreateNamespaceController(client cache.Getter,
 // CreatePodController creates a controller specifically for Pods.
 func CreatePodController(client cache.Getter, namespace string,
 	addFunc func(addedApiStruct *api.Pod) error, deleteFunc func(deletedApiStruct *api.Pod) error, updateFunc func(oldApiStruct, updatedApiStruct *api.Pod) error) (cache.Store, *cache.Controller) {
-	return CreateResourceController(client, "pod", namespace, &api.Pod{},
+	return CreateResourceController(client, "pods", namespace, &api.Pod{},
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Pod)); err != nil {
 				glog.V(2).Infof("Error while handling Add Pod: %s ", err)
@@ -86,6 +86,27 @@ func CreateNetworkPoliciesController(client cache.Getter, namespace string,
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*extensions.NetworkPolicy), updatedApiStruct.(*extensions.NetworkPolicy)); err != nil {
 				glog.V(2).Infof("Error while handling Update NetworkPolicy: %s ", err)
+			}
+		})
+}
+
+// CreateNodeController creates a controller specifically for NetworkPolicies.
+func CreateNodeController(client cache.Getter,
+	addFunc func(addedApiStruct *api.Node) error, deleteFunc func(deletedApiStruct *api.Node) error, updateFunc func(oldApiStruct, updatedApiStruct *api.Node) error) (cache.Store, *cache.Controller) {
+	return CreateResourceController(client, "nodes", "", &api.Node{},
+		func(addedApiStruct interface{}) {
+			if err := addFunc(addedApiStruct.(*api.Node)); err != nil {
+				glog.V(2).Infof("Error while handling Add Node: %s ", err)
+			}
+		},
+		func(deletedApiStruct interface{}) {
+			if err := deleteFunc(deletedApiStruct.(*api.Node)); err != nil {
+				glog.V(2).Infof("Error while handling Delete Node: %s ", err)
+			}
+		},
+		func(oldApiStruct, updatedApiStruct interface{}) {
+			if err := updateFunc(oldApiStruct.(*api.Node), updatedApiStruct.(*api.Node)); err != nil {
+				glog.V(2).Infof("Error while handling Update Node: %s ", err)
 			}
 		})
 }
