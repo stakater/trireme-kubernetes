@@ -74,7 +74,7 @@ func main() {
 	// Start all the go routines.
 	trireme.Start()
 	monitor.Start()
-	kubernetesPolicy.Start()
+	kubernetesPolicy.Run()
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)

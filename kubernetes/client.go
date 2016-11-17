@@ -153,3 +153,8 @@ func (c *Client) AllNodes() (*api.NodeList, error) {
 	}
 	return nodes, nil
 }
+
+// KubeClient returns the Kubernetes ClientSet
+func (c *Client) KubeClient() *client.Clientset {
+	return c.kubeClient
+}
