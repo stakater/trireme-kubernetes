@@ -170,7 +170,7 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	// Check if the Pod's namespace is activated.
 	if !k.cache.isNamespaceActive(kubernetesNamespace) {
 
-		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll. %s", kubernetesNamespace)
+		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll.", kubernetesNamespace)
 		allowAllPuPolicy := allowAllPolicy()
 		// adding the namespace as an extra label.
 		podLabels["@namespace"] = kubernetesNamespace
@@ -232,14 +232,14 @@ func (k *KubernetesPolicy) activateNamespace(namespace *api.Namespace) error {
 	glog.V(2).Infof("Activating namespace %s for NetworkPolicies", namespace.Name)
 
 	podControllerStop := make(chan struct{})
-	_, podController := k.KubernetesClient.CreateLocalPodController(namespace.GetNamespace(),
+	_, podController := k.KubernetesClient.CreateLocalPodController(namespace.Name,
 		k.addPod,
 		k.deletePod,
 		k.updatePod)
 	go podController.Run(podControllerStop)
 
 	npControllerStop := make(chan struct{})
-	_, npController := k.KubernetesClient.CreateNetworkPoliciesController(namespace.GetNamespace(),
+	_, npController := k.KubernetesClient.CreateNetworkPoliciesController(namespace.Name,
 		k.addNetworkPolicy,
 		k.deleteNetworkPolicy,
 		k.updateNetworkPolicy)

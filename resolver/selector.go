@@ -262,12 +262,12 @@ func allowAllPolicy() *policy.PUPolicy {
 	containerPolicy.TriremeAction = policy.AllowAll
 	iPruleTCP := policy.IPRule{
 		Address:  "0.0.0.0/0",
-		Port:     "80",
+		Port:     "0:65535",
 		Protocol: "TCP",
 	}
 	iPruleUDP := policy.IPRule{
 		Address:  "0.0.0.0/0",
-		Port:     "80",
+		Port:     "0:65535",
 		Protocol: "UDP",
 	}
 	containerPolicy.IngressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}
