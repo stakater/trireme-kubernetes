@@ -20,7 +20,7 @@ type Client struct {
 }
 
 // NewClient Generate and initialize a Trireme Client object
-func NewClient(kubeconfig string, namespace string, nodename string) (*Client, error) {
+func NewClient(kubeconfig string, nodename string) (*Client, error) {
 	Client := &Client{}
 	Client.localNode = nodename
 
