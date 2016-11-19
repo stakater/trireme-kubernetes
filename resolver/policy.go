@@ -122,13 +122,14 @@ func (k *KubernetesPolicy) SetExcluder(excluder supervisor.Excluder) error {
 	return nil
 }
 
-// excludeLocalIP registers the interface used for updating Policies explicitely.
+// excludeLocalIP registers the CNI Interface on the node for explicit allowance.
+// This is needed for HealtCheck and LocalHost communication to the Pod.
 func (k *KubernetesPolicy) excludeLocalIP(ip string) error {
 	parsedIP := net.ParseIP(ip)
 	ipb := parsedIP.To4()
-	ipb[3] = 0
+	ipb[3] = 1
 	k.localExcluded = true
-	return k.excluder.AddExcludedIP(ipb.String() + "/24")
+	return k.excluder.AddExcludedIP(ipb.String() + "/32")
 }
 
 // ResolvePolicy generates the Policy for the target PU.
@@ -182,6 +183,10 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 		return notInfraContainerPolicy(), nil
 	}
 
+	if !k.localExcluded {
+		k.excludeLocalIP(pod.Status.PodIP)
+	}
+
 	podLabels := pod.GetLabels()
 	if podLabels == nil {
 		return notInfraContainerPolicy(), nil
@@ -216,9 +221,6 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 
 	puPolicy.PolicyTags = podLabels
 	puPolicy.PolicyIPs = []string{pod.Status.PodIP}
-	if !k.localExcluded {
-		k.excludeLocalIP(pod.Status.PodIP)
-	}
 	return puPolicy, nil
 }
 
