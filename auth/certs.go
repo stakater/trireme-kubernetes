@@ -33,40 +33,24 @@ func NewCertsWatcher(client kubernetes.Client, pki enforcer.PublicKeyAdder, node
 		nodeAnnotationKey: nodeAnnotationKey,
 	}
 
-	// This will start to enqueue new Event nodes.
-	go client.NodeWatcher(certs.nodeResultChan, certs.nodeStopChan)
-
 	return certs
 }
 
 // StartWatchingCerts processes all the events for certs.
 func (c *Certs) StartWatchingCerts() {
-	for {
-		select {
-		case <-c.certStopChan:
-			glog.V(2).Infof("Received Stop signal for Certs")
-			return
-		case req := <-c.nodeResultChan:
-			glog.V(8).Infof("Processing NodeEvents")
-			err := c.ProcessNodeUpdate(req.Object.(*api.Node), req.Type)
-			if err != nil {
-				glog.V(1).Infof("Error processing node update: %s", err)
-			}
-		}
-	}
 }
 
 // ProcessNodeUpdate is triggered when a new event is received.
-func (c *Certs) ProcessNodeUpdate(node *api.Node, eventType watch.EventType) error {
-	if eventType == watch.Added {
-		annotations := node.GetAnnotations()
+func (c *Certs) addNode(node *api.Node) error {
 
-		cert, ok := annotations[c.nodeAnnotationKey]
-		if !ok {
-			return fmt.Errorf("Certificate not found in annotation for node %s", node.GetName())
-		}
-		c.addCertToCache(node.GetName(), certStringToBytes(cert))
+	annotations := node.GetAnnotations()
+
+	cert, ok := annotations[c.nodeAnnotationKey]
+	if !ok {
+		return fmt.Errorf("Certificate not found in annotation for node %s", node.GetName())
 	}
+	c.addCertToCache(node.GetName(), certStringToBytes(cert))
+
 	return nil
 }
 

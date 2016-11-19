@@ -56,14 +56,16 @@ func (c *Client) InitKubernetesClient(kubeconfig string) error {
 	return nil
 }
 
-func (c *Client) localNodeOption() api.ListOptions {
-	fs := fields.Set(map[string]string{
+func (c *Client) localNodeSelector() fields.Selector {
+	return fields.Set(map[string]string{
 		"spec.nodeName": c.localNode,
-	})
-	option := api.ListOptions{
-		FieldSelector: fs.AsSelector(),
+	}).AsSelector()
+}
+
+func (c *Client) localNodeOption() api.ListOptions {
+	return api.ListOptions{
+		FieldSelector: c.localNodeSelector(),
 	}
-	return option
 }
 
 // PodRules return the list of all the IngressRules that apply to the pod.
@@ -117,6 +119,15 @@ func (c *Client) PodLabelsAndIP(podName string, namespace string) (map[string]st
 	return targetPod.GetLabels(), ip, nil
 }
 
+// Pod returns the pod object.
+func (c *Client) Pod(podName string, namespace string) (*api.Pod, error) {
+	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
+	if err != nil {
+		return nil, fmt.Errorf("error getting Kubernetes labels & IP for pod %v : %v ", podName, err)
+	}
+	return targetPod, nil
+}
+
 // LocalPods return a PodList with all the pods scheduled on the local node
 func (c *Client) LocalPods(namespace string) (*api.PodList, error) {
 	return c.kubeClient.Pods(namespace).List(c.localNodeOption())
@@ -152,4 +163,9 @@ func (c *Client) AllNodes() (*api.NodeList, error) {
 		return nil, fmt.Errorf("Couldn't get nodes list : %s", err)
 	}
 	return nodes, nil
+}
+
+// KubeClient returns the Kubernetes ClientSet
+func (c *Client) KubeClient() *client.Clientset {
+	return c.kubeClient
 }

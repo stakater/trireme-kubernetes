@@ -204,12 +204,12 @@ func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.Networ
 func addACLRules(containerPolicy *policy.PUPolicy) error {
 	iPruleTCP := policy.IPRule{
 		Address:  "0.0.0.0/0",
-		Port:     "*",
+		Port:     "80",
 		Protocol: "TCP",
 	}
 	iPruleUDP := policy.IPRule{
 		Address:  "0.0.0.0/0",
-		Port:     "*",
+		Port:     "80",
 		Protocol: "UDP",
 	}
 	containerPolicy.IngressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}
@@ -262,12 +262,12 @@ func allowAllPolicy() *policy.PUPolicy {
 	containerPolicy.TriremeAction = policy.AllowAll
 	iPruleTCP := policy.IPRule{
 		Address:  "0.0.0.0/0",
-		Port:     "*",
+		Port:     "0:65535",
 		Protocol: "TCP",
 	}
 	iPruleUDP := policy.IPRule{
 		Address:  "0.0.0.0/0",
-		Port:     "*",
+		Port:     "0:65535",
 		Protocol: "UDP",
 	}
 	containerPolicy.IngressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}

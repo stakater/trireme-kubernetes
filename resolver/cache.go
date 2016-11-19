@@ -2,15 +2,11 @@ package resolver
 
 import (
 	"fmt"
-	"reflect"
 	"sync"
-
-	"github.com/aporeto-inc/trireme/policy"
 )
 
 type podCacheEntry struct {
 	contextID string
-	labels    policy.TagsMap
 }
 
 // Cache keeps all the state needed for the integration.
@@ -37,7 +33,7 @@ func (c *cache) addPodToCache(contextID string, podName string, podNamespace str
 	c.Lock()
 	defer c.Unlock()
 	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
-	c.podCache[kubeIdentifier] = podCacheEntry{contextID: contextID, labels: policy.TagsMap{}}
+	c.podCache[kubeIdentifier] = podCacheEntry{contextID: contextID}
 }
 
 func (c *cache) contextIDByPodName(podName string, podNamespace string) (string, error) {
@@ -49,36 +45,6 @@ func (c *cache) contextIDByPodName(podName string, podNamespace string) (string,
 		return "", fmt.Errorf("Pod %v not found in Cache", kubeIdentifier)
 	}
 	return cacheEntry.contextID, nil
-}
-
-func (c *cache) isLatestLabelSet(podName string, podNamespace string, newLabels policy.TagsMap) (bool, error) {
-	c.Lock()
-	defer c.Unlock()
-	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
-	cacheEntry, ok := c.podCache[kubeIdentifier]
-	if !ok {
-		return false, fmt.Errorf("Pod %v not found in Cache", kubeIdentifier)
-	}
-	return reflect.DeepEqual(cacheEntry.labels, newLabels), nil
-}
-
-func (c *cache) updatePodLabels(podName string, podNamespace string, newLabels policy.TagsMap) error {
-	c.Lock()
-	defer c.Unlock()
-	kubeIdentifier := kubePodIdentifier(podName, podNamespace)
-	cacheEntry, ok := c.podCache[kubeIdentifier]
-	if !ok {
-		return fmt.Errorf("Pod %v not found in Cache", kubeIdentifier)
-	}
-	newMap := policy.TagsMap{}
-	for k, v := range newLabels {
-		newMap[k] = v
-	}
-
-	cacheEntry.labels = newMap
-	c.podCache[kubeIdentifier] = cacheEntry
-	return nil
-
 }
 
 func (c *cache) deleteFromCacheByPodName(podName string, podNamespace string) error {
@@ -113,8 +79,7 @@ func (c *cache) deactivateNamespaceWatcher(namespace string) {
 	if !ok {
 		return
 	}
-	namespaceWatcher.podStopChan <- true
-	namespaceWatcher.policyStopChan <- true
+	namespaceWatcher.stopWatchingNamespace()
 	delete(c.namespaceActivation, namespace)
 }
 
