@@ -88,6 +88,16 @@ func (c *Client) PodRules(podName string, namespace string) (*[]extensions.Netwo
 	return allRules, nil
 }
 
+// Endpoints return the list of all the IngressRules that apply to the pod.
+func (c *Client) Endpoints(service string, namespace string) (*api.Endpoints, error) {
+	// Step1: Get all the rules associated with this Pod.
+	endpoints, err := c.kubeClient.Endpoints(namespace).Get(service)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't get endpoints for service %s from Kubernetes API: %s", service, err)
+	}
+	return endpoints, nil
+}
+
 // PodLabels returns the list of all labels associated with a pod.
 func (c *Client) PodLabels(podName string, namespace string) (map[string]string, error) {
 	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)

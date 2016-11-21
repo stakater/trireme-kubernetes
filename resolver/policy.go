@@ -287,7 +287,7 @@ func (k *KubernetesPolicy) deactivateNamespace(namespace *api.Namespace) error {
 // Run is blocking. Use go
 func (k *KubernetesPolicy) Run() {
 	k.stopAll = make(chan struct{})
-	_, nsController := k.KubernetesClient.CreateNamespaceController(k.KubernetesClient.KubeClient().Core().RESTClient(),
+	_, nsController := k.KubernetesClient.CreateNamespaceController(
 		k.addNamespace,
 		k.deleteNamespace,
 		k.updateNamespace)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/aporeto-inc/trireme-kubernetes/auth"
 	"github.com/aporeto-inc/trireme-kubernetes/config"
+	"github.com/aporeto-inc/trireme-kubernetes/exclusion"
 	"github.com/aporeto-inc/trireme-kubernetes/resolver"
 
 	"github.com/aporeto-inc/trireme"
@@ -73,6 +74,9 @@ func main() {
 	kubernetesPolicy.SetPolicyUpdater(trireme)
 	// Register the IPExcluder to the Policy
 	kubernetesPolicy.SetExcluder(excluder)
+
+	exclusionWatcher := exclusion.NewWatcher(config.TriremeNets, *kubernetesPolicy.KubernetesClient, excluder)
+	go exclusionWatcher.Start()
 
 	// Start all the go routines.
 	trireme.Start()
