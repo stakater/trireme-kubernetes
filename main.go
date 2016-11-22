@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 
@@ -75,7 +76,11 @@ func main() {
 	// Register the IPExcluder to the Policy
 	kubernetesPolicy.SetExcluder(excluder)
 
-	exclusionWatcher := exclusion.NewWatcher(config.TriremeNets, *kubernetesPolicy.KubernetesClient, excluder)
+	exclusionWatcher, err := exclusion.NewWatcher(config.TriremeNets, *kubernetesPolicy.KubernetesClient, excluder)
+	if err != nil {
+		log.Fatalf("Error creating the exclusion Watcher: %s", err)
+	}
+
 	go exclusionWatcher.Start()
 
 	// Start all the go routines.
