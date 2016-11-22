@@ -9,6 +9,8 @@ import (
 	"k8s.io/kubernetes/pkg/runtime"
 )
 
+const errorLogLevel = 2
+
 // CreateResourceController creates a controller for a specific ressource and namespace.
 // Input
 func CreateResourceController(client cache.Getter, resource string, namespace string, apiStruct runtime.Object, selector fields.Selector,
@@ -25,23 +27,23 @@ func CreateResourceController(client cache.Getter, resource string, namespace st
 }
 
 // CreateNamespaceController creates a controller specifically for Namespaces.
-func (c *Client) CreateNamespaceController(client cache.Getter,
+func (c *Client) CreateNamespaceController(
 	addFunc func(addedApiStruct *api.Namespace) error, deleteFunc func(deletedApiStruct *api.Namespace) error, updateFunc func(oldApiStruct, updatedApiStruct *api.Namespace) error) (cache.Store, *cache.Controller) {
-	return CreateResourceController(client, "namespaces", "", &api.Namespace{}, fields.Everything(),
+	return CreateResourceController(c.KubeClient().Core().RESTClient(), "namespaces", "", &api.Namespace{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Namespace)); err != nil {
-				glog.V(2).Infof("Error while handling Add NameSpace: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Add NameSpace: %s ", err)
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*api.Namespace)); err != nil {
-				glog.V(2).Infof("Error while handling Delete NameSpace: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Delete NameSpace: %s ", err)
 
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*api.Namespace), updatedApiStruct.(*api.Namespace)); err != nil {
-				glog.V(2).Infof("Error while handling Update NameSpace: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Update NameSpace: %s ", err)
 
 			}
 		})
@@ -54,17 +56,17 @@ func (c *Client) CreateLocalPodController(namespace string,
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "pods", namespace, &api.Pod{}, c.localNodeSelector(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Pod)); err != nil {
-				glog.V(2).Infof("Error while handling Add Pod: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Add Pod: %s ", err)
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*api.Pod)); err != nil {
-				glog.V(2).Infof("Error while handling Delete Pod: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Delete Pod: %s ", err)
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*api.Pod), updatedApiStruct.(*api.Pod)); err != nil {
-				glog.V(2).Infof("Error while handling Update Pod: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Update Pod: %s ", err)
 			}
 		})
 }
@@ -75,17 +77,17 @@ func (c *Client) CreateNetworkPoliciesController(namespace string,
 	return CreateResourceController(c.KubeClient().Extensions().RESTClient(), "networkpolicies", namespace, &extensions.NetworkPolicy{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*extensions.NetworkPolicy)); err != nil {
-				glog.V(2).Infof("Error while handling Add NetworkPolicy: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Add NetworkPolicy: %s ", err)
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*extensions.NetworkPolicy)); err != nil {
-				glog.V(2).Infof("Error while handling Delete NetworkPolicy: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Delete NetworkPolicy: %s ", err)
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*extensions.NetworkPolicy), updatedApiStruct.(*extensions.NetworkPolicy)); err != nil {
-				glog.V(2).Infof("Error while handling Update NetworkPolicy: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Update NetworkPolicy: %s ", err)
 			}
 		})
 }
@@ -96,17 +98,38 @@ func (c *Client) CreateNodeController(
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "nodes", "", &api.Node{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Node)); err != nil {
-				glog.V(2).Infof("Error while handling Add Node: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Add Node: %s ", err)
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*api.Node)); err != nil {
-				glog.V(2).Infof("Error while handling Delete Node: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Delete Node: %s ", err)
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*api.Node), updatedApiStruct.(*api.Node)); err != nil {
-				glog.V(2).Infof("Error while handling Update Node: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Update Node: %s ", err)
+			}
+		})
+}
+
+// CreateServiceController creates a controller specifically for NetworkPolicies.
+func (c *Client) CreateServiceController(
+	addFunc func(addedApiStruct *api.Service) error, deleteFunc func(deletedApiStruct *api.Service) error, updateFunc func(oldApiStruct, updatedApiStruct *api.Service) error) (cache.Store, *cache.Controller) {
+	return CreateResourceController(c.KubeClient().Core().RESTClient(), "services", "", &api.Service{}, fields.Everything(),
+		func(addedApiStruct interface{}) {
+			if err := addFunc(addedApiStruct.(*api.Service)); err != nil {
+				glog.V(errorLogLevel).Infof("Error while handling Add Node: %s ", err)
+			}
+		},
+		func(deletedApiStruct interface{}) {
+			if err := deleteFunc(deletedApiStruct.(*api.Service)); err != nil {
+				glog.V(errorLogLevel).Infof("Error while handling Delete Node: %s ", err)
+			}
+		},
+		func(oldApiStruct, updatedApiStruct interface{}) {
+			if err := updateFunc(oldApiStruct.(*api.Service), updatedApiStruct.(*api.Service)); err != nil {
+				glog.V(errorLogLevel).Infof("Error while handling Update Node: %s ", err)
 			}
 		})
 }

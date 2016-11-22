@@ -3,6 +3,7 @@ package resolver
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 
 	"github.com/aporeto-inc/kubepox"
 	"github.com/aporeto-inc/trireme"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/aporeto-inc/trireme/monitor"
 	"github.com/aporeto-inc/trireme/policy"
+	"github.com/aporeto-inc/trireme/supervisor"
 	"github.com/golang/glog"
 
 	"k8s.io/kubernetes/pkg/api"
@@ -39,6 +41,8 @@ const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-poli
 // by Kubernetes NetworkPolicy API.
 type KubernetesPolicy struct {
 	policyUpdater     trireme.PolicyUpdater
+	excluder          supervisor.Excluder
+	localExcluded     bool
 	KubernetesClient  *kubernetes.Client
 	cache             *cache
 	stopAll           chan struct{}
@@ -46,8 +50,8 @@ type KubernetesPolicy struct {
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
-func NewKubernetesPolicy(kubeconfig string, namespace string, nodename string) (*KubernetesPolicy, error) {
-	client, err := kubernetes.NewClient(kubeconfig, namespace, nodename)
+func NewKubernetesPolicy(kubeconfig string, nodename string) (*KubernetesPolicy, error) {
+	client, err := kubernetes.NewClient(kubeconfig, nodename)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't create KubernetesClient: %v ", err)
 	}
@@ -55,6 +59,7 @@ func NewKubernetesPolicy(kubeconfig string, namespace string, nodename string) (
 	return &KubernetesPolicy{
 		cache:            newCache(),
 		KubernetesClient: client,
+		localExcluded:    false,
 	}, nil
 }
 
@@ -106,9 +111,25 @@ func isPolicyUpdateNeeded(oldPod, newPod *api.Pod) bool {
 }
 
 // SetPolicyUpdater registers the interface used for updating Policies explicitely.
-func (k *KubernetesPolicy) SetPolicyUpdater(p trireme.PolicyUpdater) error {
-	k.policyUpdater = p
+func (k *KubernetesPolicy) SetPolicyUpdater(policyUpdater trireme.PolicyUpdater) error {
+	k.policyUpdater = policyUpdater
 	return nil
+}
+
+// SetExcluder registers the interface used for updating Policies explicitely.
+func (k *KubernetesPolicy) SetExcluder(excluder supervisor.Excluder) error {
+	k.excluder = excluder
+	return nil
+}
+
+// excludeLocalIP registers the CNI Interface on the node for explicit allowance.
+// This is needed for HealtCheck and LocalHost communication to the Pod.
+func (k *KubernetesPolicy) excludeLocalIP(ip string) error {
+	parsedIP := net.ParseIP(ip)
+	ipb := parsedIP.To4()
+	ipb[3] = 1
+	k.localExcluded = true
+	return k.excluder.AddExcludedIP(ipb.String() + "/32")
 }
 
 // ResolvePolicy generates the Policy for the target PU.
@@ -162,6 +183,10 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 		return notInfraContainerPolicy(), nil
 	}
 
+	if !k.localExcluded {
+		k.excludeLocalIP(pod.Status.PodIP)
+	}
+
 	podLabels := pod.GetLabels()
 	if podLabels == nil {
 		return notInfraContainerPolicy(), nil
@@ -193,9 +218,9 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	if err != nil {
 		return nil, err
 	}
+
 	puPolicy.PolicyTags = podLabels
 	puPolicy.PolicyIPs = []string{pod.Status.PodIP}
-
 	return puPolicy, nil
 }
 
@@ -262,7 +287,7 @@ func (k *KubernetesPolicy) deactivateNamespace(namespace *api.Namespace) error {
 // Run is blocking. Use go
 func (k *KubernetesPolicy) Run() {
 	k.stopAll = make(chan struct{})
-	_, nsController := k.KubernetesClient.CreateNamespaceController(k.KubernetesClient.KubeClient().Core().RESTClient(),
+	_, nsController := k.KubernetesClient.CreateNamespaceController(
 		k.addNamespace,
 		k.deleteNamespace,
 		k.updateNamespace)

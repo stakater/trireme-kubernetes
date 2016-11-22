@@ -20,7 +20,7 @@ type Client struct {
 }
 
 // NewClient Generate and initialize a Trireme Client object
-func NewClient(kubeconfig string, namespace string, nodename string) (*Client, error) {
+func NewClient(kubeconfig string, nodename string) (*Client, error) {
 	Client := &Client{}
 	Client.localNode = nodename
 
@@ -86,6 +86,16 @@ func (c *Client) PodRules(podName string, namespace string) (*[]extensions.Netwo
 		return nil, fmt.Errorf("Couldn't process the list of rules for pod %v : %v", podName, err)
 	}
 	return allRules, nil
+}
+
+// Endpoints return the list of all the IngressRules that apply to the pod.
+func (c *Client) Endpoints(service string, namespace string) (*api.Endpoints, error) {
+	// Step1: Get all the rules associated with this Pod.
+	endpoints, err := c.kubeClient.Endpoints(namespace).Get(service)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't get endpoints for service %s from Kubernetes API: %s", service, err)
+	}
+	return endpoints, nil
 }
 
 // PodLabels returns the list of all labels associated with a pod.
