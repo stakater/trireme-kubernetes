@@ -65,11 +65,10 @@ func (w *Watcher) addService(addedAPIStruct *api.Service) error {
 	if addedAPIStruct.Spec.ClusterIP == "" {
 		return nil
 	}
-	fmt.Printf("Processing Added Cluster IP: %s", addedAPIStruct.Spec.ClusterIP)
 	endpoints, _ := w.kubeClient.Endpoints(addedAPIStruct.GetName(), addedAPIStruct.GetNamespace())
 	for _, set := range endpoints.Subsets {
 		for _, ip := range set.Addresses {
-			glog.V(2).Infof("Checking if endpoint IP %s (ClusterIP %s ) is part of TriremeNets ", ip, addedAPIStruct.Spec.ClusterIP)
+			glog.V(2).Infof("Checking if endpoint IP %s (ClusterIP %s ) is part of TriremeNets ", ip.IP, addedAPIStruct.Spec.ClusterIP)
 			if !w.isInTriremeNets(ip.IP) {
 				return w.excludeServiceIP(addedAPIStruct.Spec.ClusterIP)
 			}
