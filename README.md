@@ -61,14 +61,14 @@ kubectl create -f deployment/PolicyExample/Demo3TierPods.yaml
 Try to connect to your pods from other pods:
 * External --> Backend: Forbidden
 ```
-kubectl exec -it external /bin/bash
-curl http://<BACKEND_IP>
+kubectl --namespace=demo exec -it external /bin/bash
+wget http://<BACKEND_IP>
 ```
 
 * Frontend --> Backend: Allowed
 ```
-kubectl exec -it frontend /bin/bash
-curl http://<BACKEND_IP>
+kubectl --namespace=demo exec -it frontend /bin/bash
+wget http://<BACKEND_IP>
 ```
 
 ## Prerequisites
