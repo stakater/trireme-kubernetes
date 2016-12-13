@@ -54,7 +54,7 @@ The DaemonSet expects to find the PKI files on a local directory `/var/trireme`
 
 
 * `SYNC_EXISTING_CONTAINERS` is `true` by default. Defines if already running pods also need to be policed.
-* `TRIREME_NETS` is the set of networks that represents all the Trireme Endpoints. This is `10.0.0.0\8` by default.
+* `TRIREME_NETS` is the set of networks that represents all the Trireme Endpoints. This is `10.0.0.0/8` by default.
 * `TRIREME_AUTH_TYPE` is `PKI` by default. Can also be `PSK`.
 * `TRIREME_PKI_MOUNT` is only needed if TRIREME_AUTH_TYPE is `PKI`. It defines where the certificates and private key are mounted on the system.
 * `TRIREME_PSK` is only needed if TRIREME_AUTH_TYPE is `PSK`. It defines the shared password used for node authentication.
