@@ -30,13 +30,15 @@ func NewClient(kubeconfig string, nodename string) (*Client, error) {
 	return Client, nil
 }
 
-// InitKubernetesClient Initialize the Kubernetes client
+// InitKubernetesClient Initialize the Kubernetes client based on the parameter kubeconfig
+// if Kubeconfig is empty, try an in-cluster auth.
 func (c *Client) InitKubernetesClient(kubeconfig string) error {
 
 	var config *restclient.Config
 	var err error
 
 	if kubeconfig == "" {
+		// TODO: Explicit InCluster config call.
 		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
 		if err != nil {
 			return fmt.Errorf("Error Building InCluster config: %v", err)
@@ -88,7 +90,7 @@ func (c *Client) PodRules(podName string, namespace string) (*[]extensions.Netwo
 	return allRules, nil
 }
 
-// Endpoints return the list of all the IngressRules that apply to the pod.
+// Endpoints return the list of all the Endpoints that are serviced by a specific service/namespace.
 func (c *Client) Endpoints(service string, namespace string) (*api.Endpoints, error) {
 	// Step1: Get all the rules associated with this Pod.
 	endpoints, err := c.kubeClient.Endpoints(namespace).Get(service)
@@ -129,7 +131,7 @@ func (c *Client) PodLabelsAndIP(podName string, namespace string) (map[string]st
 	return targetPod.GetLabels(), ip, nil
 }
 
-// Pod returns the pod object.
+// Pod returns the full pod object.
 func (c *Client) Pod(podName string, namespace string) (*api.Pod, error) {
 	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
 	if err != nil {

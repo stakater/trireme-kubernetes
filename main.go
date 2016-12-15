@@ -26,7 +26,7 @@ func main() {
 
 	glog.V(2).Infof("Config used: %+v ", config)
 
-	// Create New PolicyEngine for  Kubernetes
+	// Create New PolicyEngine for Kubernetes
 	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeConfigLocation, config.KubeNodeName)
 	if err != nil {
 		fmt.Printf("Error initializing KubernetesPolicy, exiting: %s \n", err)
@@ -38,30 +38,32 @@ func main() {
 	var excluder supervisor.Excluder
 	var publicKeyAdder enforcer.PublicKeyAdder
 
-	// Checking statically if the Node name is not more than the maximum ServerID supported in the token package.
+	// Checking statically if the node name is not more than the maximum ServerID
+	// length supported by Trireme.
 	if len(config.KubeNodeName) > tokens.MaxServerName {
 		config.KubeNodeName = config.KubeNodeName[:tokens.MaxServerName]
 	}
 
 	if config.AuthType == "PSK" {
-		// Starting PSK
 		glog.V(2).Infof("Starting Trireme PSK")
+		// Starting PSK Trireme
 		trireme, monitor, excluder = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK))
 
 	}
+
 	if config.AuthType == "PKI" {
-		// Starting PKI
 		glog.V(2).Infof("Starting Trireme PKI")
-		// Load the PKI Certs/Keys.
+		// Load the PKI Certs/Keys based on config.
 		pki, err := auth.LoadPKI(config.PKIDirectory)
 		if err != nil {
 			fmt.Printf("Error loading Certificates for PKI Trireme, exiting: %s \n", err)
 			return
 		}
-		// Starting PKI
+		// Starting PKI Trireme
 		trireme, monitor, excluder, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
 
-		// Sync the certs over all the Kubernetes Cluster.
+		// Sync the Trireme certs over all the Kubernetes Cluster. Annotations on the
+		// node object are used to hold those certs.
 		// 1) Adds the localCert on the localNode annotation
 		// 2) Sync All the Certs from the other nodes to the CertCache (interface)
 		// 3) Waits and listen for new nodes coming up.
@@ -71,9 +73,9 @@ func main() {
 		go certs.StartWatchingCerts()
 
 	}
-	// Register Trireme to the Policy.
+	// Register Trireme to the Kubernetes policy resolver
 	kubernetesPolicy.SetPolicyUpdater(trireme)
-	// Register the IPExcluder to the Policy
+	// Register the IPExcluder to the  Kubernetes policy resolver
 	kubernetesPolicy.SetExcluder(excluder)
 
 	exclusionWatcher, err := exclusion.NewWatcher(config.TriremeNets, *kubernetesPolicy.KubernetesClient, excluder)
@@ -91,6 +93,7 @@ func main() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
+	// Waiting for a Sig
 	<-c
 
 	fmt.Println("Bye Kubernetes!")

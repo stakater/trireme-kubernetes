@@ -12,9 +12,10 @@ import (
 const errorLogLevel = 2
 
 // CreateResourceController creates a controller for a specific ressource and namespace.
-// Input
+// The parameter function will be called on Add/Delete/Update events
 func CreateResourceController(client cache.Getter, resource string, namespace string, apiStruct runtime.Object, selector fields.Selector,
 	addFunc func(addedApiStruct interface{}), deleteFunc func(deletedApiStruct interface{}), updateFunc func(oldApiStruct, updatedApiStruct interface{})) (cache.Store, *cache.Controller) {
+
 	handlers := cache.ResourceEventHandlerFuncs{
 		AddFunc:    addFunc,
 		DeleteFunc: deleteFunc,
@@ -29,6 +30,7 @@ func CreateResourceController(client cache.Getter, resource string, namespace st
 // CreateNamespaceController creates a controller specifically for Namespaces.
 func (c *Client) CreateNamespaceController(
 	addFunc func(addedApiStruct *api.Namespace) error, deleteFunc func(deletedApiStruct *api.Namespace) error, updateFunc func(oldApiStruct, updatedApiStruct *api.Namespace) error) (cache.Store, *cache.Controller) {
+
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "namespaces", "", &api.Namespace{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Namespace)); err != nil {
@@ -92,7 +94,7 @@ func (c *Client) CreateNetworkPoliciesController(namespace string,
 		})
 }
 
-// CreateNodeController creates a controller specifically for NetworkPolicies.
+// CreateNodeController creates a controller specifically for Nodes.
 func (c *Client) CreateNodeController(
 	addFunc func(addedApiStruct *api.Node) error, deleteFunc func(deletedApiStruct *api.Node) error, updateFunc func(oldApiStruct, updatedApiStruct *api.Node) error) (cache.Store, *cache.Controller) {
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "nodes", "", &api.Node{}, fields.Everything(),
@@ -113,23 +115,23 @@ func (c *Client) CreateNodeController(
 		})
 }
 
-// CreateServiceController creates a controller specifically for NetworkPolicies.
+// CreateServiceController creates a controller specifically for Services.
 func (c *Client) CreateServiceController(
 	addFunc func(addedApiStruct *api.Service) error, deleteFunc func(deletedApiStruct *api.Service) error, updateFunc func(oldApiStruct, updatedApiStruct *api.Service) error) (cache.Store, *cache.Controller) {
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "services", "", &api.Service{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Service)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Add Node: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Add service: %s ", err)
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*api.Service)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Delete Node: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Delete service: %s ", err)
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*api.Service), updatedApiStruct.(*api.Service)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Update Node: %s ", err)
+				glog.V(errorLogLevel).Infof("Error while handling Update service: %s ", err)
 			}
 		})
 }

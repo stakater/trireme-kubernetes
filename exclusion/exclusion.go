@@ -51,7 +51,8 @@ func NewWatcher(triremeNets []string, kubeClient kubernetes.Client, excluder sup
 }
 
 // Start launches the Exclusion Watcher
-// Blocking. Use go...
+// The exclusion watcher listens to all the service events and
+// Blocking. Use go.
 func (w *Watcher) Start() {
 	w.serviceController.Run(w.serviceControllerStop)
 }
