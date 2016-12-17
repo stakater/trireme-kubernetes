@@ -152,7 +152,7 @@ func addPodRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolic
 			Clause: completeClause,
 			Action: policy.Accept,
 		}
-		containerPolicy.Rules = append(containerPolicy.Rules, selector)
+		containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
 	}
 
 	return nil
@@ -197,7 +197,7 @@ func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.Networ
 		Action: policy.Accept,
 	}
 
-	containerPolicy.Rules = append(containerPolicy.Rules, selector)
+	containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
 	return nil
 }
 
@@ -217,7 +217,7 @@ func addACLRules(containerPolicy *policy.PUPolicy) error {
 }
 
 func logRules(containerPolicy *policy.PUPolicy) {
-	for i, selector := range containerPolicy.Rules {
+	for i, selector := range containerPolicy.ReceiverRules {
 		for _, clause := range selector.Clause {
 			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
 		}
@@ -258,7 +258,7 @@ func allowAllPolicy() *policy.PUPolicy {
 		Clause: completeClause,
 		Action: policy.Accept,
 	}
-	containerPolicy.Rules = append(containerPolicy.Rules, selector)
+	containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
 	containerPolicy.TriremeAction = policy.AllowAll
 	iPruleTCP := policy.IPRule{
 		Address:  "0.0.0.0/0",

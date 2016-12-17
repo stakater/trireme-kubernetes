@@ -47,7 +47,7 @@ func main() {
 	if config.AuthType == "PSK" {
 		glog.V(2).Infof("Starting Trireme PSK")
 		// Starting PSK Trireme
-		trireme, monitor, excluder = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK))
+		trireme, monitor, excluder = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK), nil)
 
 	}
 
@@ -60,7 +60,7 @@ func main() {
 			return
 		}
 		// Starting PKI Trireme
-		trireme, monitor, excluder, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM)
+		trireme, monitor, excluder, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM, nil)
 
 		// Sync the Trireme certs over all the Kubernetes Cluster. Annotations on the
 		// node object are used to hold those certs.
