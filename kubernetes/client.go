@@ -7,6 +7,7 @@ import (
 
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/extensions"
+	metav1 "k8s.io/kubernetes/pkg/apis/meta/v1"
 	client "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 	"k8s.io/kubernetes/pkg/client/restclient"
 	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
@@ -73,7 +74,7 @@ func (c *Client) localNodeOption() api.ListOptions {
 // PodRules return the list of all the IngressRules that apply to the pod.
 func (c *Client) PodRules(podName string, namespace string) (*[]extensions.NetworkPolicyIngressRule, error) {
 	// Step1: Get all the rules associated with this Pod.
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
+	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get pod %v from Kubernetes API: %v", podName, err)
 	}
@@ -93,7 +94,7 @@ func (c *Client) PodRules(podName string, namespace string) (*[]extensions.Netwo
 // Endpoints return the list of all the Endpoints that are serviced by a specific service/namespace.
 func (c *Client) Endpoints(service string, namespace string) (*api.Endpoints, error) {
 	// Step1: Get all the rules associated with this Pod.
-	endpoints, err := c.kubeClient.Endpoints(namespace).Get(service)
+	endpoints, err := c.kubeClient.Endpoints(namespace).Get(service, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get endpoints for service %s from Kubernetes API: %s", service, err)
 	}
@@ -102,7 +103,7 @@ func (c *Client) Endpoints(service string, namespace string) (*api.Endpoints, er
 
 // PodLabels returns the list of all labels associated with a pod.
 func (c *Client) PodLabels(podName string, namespace string) (map[string]string, error) {
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
+	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error getting Kubernetes labels for pod %v : %v ", podName, err)
 	}
@@ -111,7 +112,7 @@ func (c *Client) PodLabels(podName string, namespace string) (map[string]string,
 
 // PodIP returns the pod's IP.
 func (c *Client) PodIP(podName string, namespace string) (string, error) {
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
+	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("error getting Kubernetes IP for pod %v : %v ", podName, err)
 	}
@@ -120,7 +121,7 @@ func (c *Client) PodIP(podName string, namespace string) (string, error) {
 
 // PodLabelsAndIP returns the list of all labels associated with a pod as well as the Pod's IP.
 func (c *Client) PodLabelsAndIP(podName string, namespace string) (map[string]string, string, error) {
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
+	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", fmt.Errorf("error getting Kubernetes labels & IP for pod %v : %v ", podName, err)
 	}
@@ -133,7 +134,7 @@ func (c *Client) PodLabelsAndIP(podName string, namespace string) (map[string]st
 
 // Pod returns the full pod object.
 func (c *Client) Pod(podName string, namespace string) (*api.Pod, error) {
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName)
+	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error getting Kubernetes labels & IP for pod %v : %v ", podName, err)
 	}
@@ -153,7 +154,7 @@ func (c *Client) AllNamespaces() (*api.NamespaceList, error) {
 // AddLocalNodeAnnotation adds the annotationKey:annotationValue
 func (c *Client) AddLocalNodeAnnotation(annotationKey, annotationValue string) error {
 	nodeName := c.localNode
-	node, err := c.kubeClient.Nodes().Get(nodeName)
+	node, err := c.kubeClient.Nodes().Get(nodeName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Couldn't get node %s: %s", nodeName, err)
 	}

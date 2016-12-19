@@ -5,9 +5,10 @@ import (
 
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/golang/glog"
+
 	"k8s.io/kubernetes/pkg/api"
-	apiu "k8s.io/kubernetes/pkg/api/unversioned"
 	"k8s.io/kubernetes/pkg/apis/extensions"
+	metav1 "k8s.io/kubernetes/pkg/apis/meta/v1"
 	"k8s.io/kubernetes/pkg/labels"
 	"k8s.io/kubernetes/pkg/selection"
 )
@@ -110,7 +111,7 @@ func addPodRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolic
 	for _, peer := range rule.From {
 
 		// Individual From. Each From is ORed.
-		peerSelector, err := apiu.LabelSelectorAsSelector(peer.PodSelector)
+		peerSelector, err := metav1.LabelSelectorAsSelector(peer.PodSelector)
 		if err != nil {
 			return fmt.Errorf("Error while parsing Peer label selector %s", err)
 		}
@@ -152,7 +153,7 @@ func addPodRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolic
 			Clause: completeClause,
 			Action: policy.Accept,
 		}
-		containerPolicy.Rules = append(containerPolicy.Rules, selector)
+		containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
 	}
 
 	return nil
@@ -163,7 +164,7 @@ func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.Networ
 	matchedNamespaces := map[string]bool{}
 	for _, peer := range rule.From {
 		// Individual From. Each From is ORed.
-		namespaceSelector, err := apiu.LabelSelectorAsSelector(peer.NamespaceSelector)
+		namespaceSelector, err := metav1.LabelSelectorAsSelector(peer.NamespaceSelector)
 		if err != nil {
 			return fmt.Errorf("Error while parsing Peer label selector %s", err)
 		}
@@ -197,7 +198,7 @@ func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.Networ
 		Action: policy.Accept,
 	}
 
-	containerPolicy.Rules = append(containerPolicy.Rules, selector)
+	containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
 	return nil
 }
 
@@ -217,7 +218,7 @@ func addACLRules(containerPolicy *policy.PUPolicy) error {
 }
 
 func logRules(containerPolicy *policy.PUPolicy) {
-	for i, selector := range containerPolicy.Rules {
+	for i, selector := range containerPolicy.ReceiverRules {
 		for _, clause := range selector.Clause {
 			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
 		}
@@ -258,7 +259,7 @@ func allowAllPolicy() *policy.PUPolicy {
 		Clause: completeClause,
 		Action: policy.Accept,
 	}
-	containerPolicy.Rules = append(containerPolicy.Rules, selector)
+	containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
 	containerPolicy.TriremeAction = policy.AllowAll
 	iPruleTCP := policy.IPRule{
 		Address:  "0.0.0.0/0",
