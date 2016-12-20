@@ -106,14 +106,15 @@ func generateNamespacekvo(namespace string) []policy.KeyValueOperator {
 	return []policy.KeyValueOperator{kvo}
 }
 
-func addPodRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, namespace string) error {
+func addPodRules(rule *extensions.NetworkPolicyIngressRule, namespace string) ([]policy.TagSelector, error) {
 
+	receiverRules := []policy.TagSelector{}
 	for _, peer := range rule.From {
 
 		// Individual From. Each From is ORed.
 		peerSelector, err := metav1.LabelSelectorAsSelector(peer.PodSelector)
 		if err != nil {
-			return fmt.Errorf("Error while parsing Peer label selector %s", err)
+			return nil, fmt.Errorf("Error while parsing Peer label selector %s", err)
 		}
 		peerRequirements, _ := peerSelector.Requirements()
 
@@ -153,20 +154,20 @@ func addPodRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolic
 			Clause: completeClause,
 			Action: policy.Accept,
 		}
-		containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
+		receiverRules = append(receiverRules, selector)
 	}
 
-	return nil
+	return receiverRules, nil
 }
 
-func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList) error {
-
+func addNamespaceRules(rule *extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList) ([]policy.TagSelector, error) {
+	receiverRules := []policy.TagSelector{}
 	matchedNamespaces := map[string]bool{}
 	for _, peer := range rule.From {
 		// Individual From. Each From is ORed.
 		namespaceSelector, err := metav1.LabelSelectorAsSelector(peer.NamespaceSelector)
 		if err != nil {
-			return fmt.Errorf("Error while parsing Peer label selector %s", err)
+			return nil, fmt.Errorf("Error while parsing Peer label selector %s", err)
 		}
 		for _, namespace := range allNamespaces.Items {
 			if namespaceSelector.Matches(labels.Set(namespace.GetLabels())) {
@@ -185,7 +186,7 @@ func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.Networ
 	}
 	// No need to add the Namespace clause if no namespaces were matched.
 	if len(allowedNamespaces) == 0 {
-		return nil
+		return nil, nil
 	}
 	clause := policy.KeyValueOperator{
 		Key:      "@namespace",
@@ -198,11 +199,11 @@ func addNamespaceRules(containerPolicy *policy.PUPolicy, rule *extensions.Networ
 		Action: policy.Accept,
 	}
 
-	containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
-	return nil
+	receiverRules = append(receiverRules, selector)
+	return receiverRules, nil
 }
 
-func addACLRules(containerPolicy *policy.PUPolicy) error {
+func addACLRules() ([]policy.IPRule, error) {
 	iPruleTCP := policy.IPRule{
 		Address:  "0.0.0.0/0",
 		Port:     "80",
@@ -213,12 +214,11 @@ func addACLRules(containerPolicy *policy.PUPolicy) error {
 		Port:     "80",
 		Protocol: "UDP",
 	}
-	containerPolicy.IngressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}
-	return nil
+	return []policy.IPRule{iPruleTCP, iPruleUDP}, nil
 }
 
 func logRules(containerPolicy *policy.PUPolicy) {
-	for i, selector := range containerPolicy.ReceiverRules {
+	for i, selector := range containerPolicy.ReceiverRules().TagSelectors {
 		for _, clause := range selector.Clause {
 			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
 		}
@@ -227,27 +227,45 @@ func logRules(containerPolicy *policy.PUPolicy) {
 
 // createPolicyRules populate the RuleDB of a PU based on the list
 // of IngressRules coming from Kubernetes.
-func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList) (*policy.PUPolicy, error) {
-	containerPolicy := policy.NewPUPolicy()
+func createPolicyRules(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList, tags *policy.TagsMap, ips *policy.IPMap) (*policy.PUPolicy, error) {
+	receiverRules := []policy.TagSelector{}
+	ipRules := []policy.IPRule{}
 
 	for _, rule := range *rules {
-		// Populate the clauses related to each individual rules.
-		if err := addPodRules(containerPolicy, &rule, podNamespace); err != nil {
+
+		// Phase1: populate the clauses related to each individual rules.
+		podSelectorRules, err := addPodRules(&rule, podNamespace)
+		if err != nil {
 			return nil, fmt.Errorf("Error creating pod policyRule: %s", err)
 		}
-		if err := addNamespaceRules(containerPolicy, &rule, podNamespace, allNamespaces); err != nil {
+		receiverRules = append(receiverRules, podSelectorRules...)
+
+		// Phase2: populate the clauses related to the namespace rules. (namepace selector...)
+		namespaceSelectorRules, err := addNamespaceRules(&rule, podNamespace, allNamespaces)
+		if err != nil {
 			return nil, fmt.Errorf("Error creating pod namespaceRule: %s", err)
 		}
-		if err := addACLRules(containerPolicy); err != nil {
+		receiverRules = append(receiverRules, namespaceSelectorRules...)
+
+		// Phase3: populate the network rules.
+		aclSelectorRules, err := addACLRules()
+		if err != nil {
 			return nil, fmt.Errorf("Error creating pod ACLRules: %s", err)
 		}
+		ipRules = append(ipRules, aclSelectorRules...)
+
 	}
+	ingressACLs := policy.NewIPRuleList(ipRules)
+	egressACLs := policy.NewIPRuleList(ipRules)
+	receiverRulesList := policy.NewTagSelectorList(receiverRules)
+
+	containerPolicy := policy.NewPUPolicy("", policy.Police, ingressACLs, egressACLs, nil, receiverRulesList, tags, tags, ips, nil)
+
 	logRules(containerPolicy)
 	return containerPolicy, nil
 }
 
-func allowAllPolicy() *policy.PUPolicy {
-	containerPolicy := policy.NewPUPolicy()
+func allowAllPolicy(tags *policy.TagsMap, ipMap *policy.IPMap) *policy.PUPolicy {
 	completeClause := []policy.KeyValueOperator{
 		policy.KeyValueOperator{
 			Key:      "@namespace",
@@ -259,8 +277,6 @@ func allowAllPolicy() *policy.PUPolicy {
 		Clause: completeClause,
 		Action: policy.Accept,
 	}
-	containerPolicy.ReceiverRules = append(containerPolicy.ReceiverRules, selector)
-	containerPolicy.TriremeAction = policy.AllowAll
 	iPruleTCP := policy.IPRule{
 		Address:  "0.0.0.0/0",
 		Port:     "0:65535",
@@ -271,16 +287,13 @@ func allowAllPolicy() *policy.PUPolicy {
 		Port:     "0:65535",
 		Protocol: "UDP",
 	}
-	containerPolicy.IngressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}
-	containerPolicy.EgressACLs = []policy.IPRule{iPruleTCP, iPruleUDP}
+	receivingRules := policy.NewTagSelectorList([]policy.TagSelector{selector})
+	ingressACLs := policy.NewIPRuleList([]policy.IPRule{iPruleTCP, iPruleUDP})
+	egressACLs := policy.NewIPRuleList([]policy.IPRule{iPruleTCP, iPruleUDP})
 
-	return containerPolicy
+	return policy.NewPUPolicy("", policy.AllowAll, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ipMap, nil)
 }
 
 func notInfraContainerPolicy() *policy.PUPolicy {
-	containerPolicy := policy.NewPUPolicy()
-	containerPolicy.PolicyIPs = []string{""}
-	containerPolicy.TriremeAction = policy.AllowAll
-
-	return containerPolicy
+	return policy.NewPUPolicyWithDefaults()
 }

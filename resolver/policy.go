@@ -83,7 +83,7 @@ func isNamespaceNetworkPolicyActive(namespace *api.Namespace) bool {
 	if err := json.Unmarshal([]byte(value), networkPolicyAnnotation); err != nil {
 		return false
 	}
-	//
+
 	if networkPolicyAnnotation != nil &&
 		networkPolicyAnnotation.Ingress != nil &&
 		networkPolicyAnnotation.Ingress.Isolation != nil &&
@@ -100,11 +100,9 @@ func isNamespaceKubeSystem(namespace string) bool {
 
 func isPolicyUpdateNeeded(oldPod, newPod *api.Pod) bool {
 	if !(oldPod.Status.PodIP == newPod.Status.PodIP) {
-		fmt.Println("NEW IP DIFFERENT")
 		return true
 	}
 	if !labels.Equals(oldPod.GetLabels(), newPod.GetLabels()) {
-		fmt.Println("NEW LABELS DIFFERENT")
 		return true
 	}
 	return false
@@ -139,8 +137,8 @@ func (k *KubernetesPolicy) ResolvePolicy(contextID string, runtimeGetter policy.
 
 	// Only the Infra Container should be policed. All the others should be AllowAll.
 	// The Infra container can be found by checking env. variable.
-	value, ok := runtimeGetter.Tag(KubernetesContainerName)
-	if !ok || value != KubernetesInfraContainerName {
+	tagContent, ok := runtimeGetter.Tag(KubernetesContainerName)
+	if !ok || tagContent != KubernetesInfraContainerName {
 		// return AllowAll
 		glog.V(2).Infof("Container is not Infra Container. AllowingAll. %s ", contextID)
 		return notInfraContainerPolicy(), nil
@@ -183,6 +181,7 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 		return notInfraContainerPolicy(), nil
 	}
 
+	// TODO: Cleamup excluder code
 	if !k.localExcluded {
 		k.excludeLocalIP(pod.Status.PodIP)
 	}
@@ -196,11 +195,11 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	if !k.cache.isNamespaceActive(kubernetesNamespace) {
 
 		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll.", kubernetesNamespace)
-		allowAllPuPolicy := allowAllPolicy()
 		// adding the namespace as an extra label.
 		podLabels["@namespace"] = kubernetesNamespace
-		allowAllPuPolicy.PolicyTags = podLabels
-		allowAllPuPolicy.PolicyIPs = []string{pod.Status.PodIP}
+		ips := map[string]string{"default": pod.Status.PodIP}
+		allowAllPuPolicy := allowAllPolicy(policy.NewTagsMap(podLabels), policy.NewIPMap(ips))
+
 		return allowAllPuPolicy, nil
 	}
 
@@ -214,13 +213,13 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	}
 	allNamespaces, err := k.KubernetesClient.AllNamespaces()
 
-	puPolicy, err := createPolicyRules(allRules, kubernetesNamespace, allNamespaces)
+	ips := map[string]string{"default": pod.Status.PodIP}
+
+	puPolicy, err := createPolicyRules(allRules, kubernetesNamespace, allNamespaces, policy.NewTagsMap(podLabels), policy.NewIPMap(ips))
 	if err != nil {
 		return nil, err
 	}
 
-	puPolicy.PolicyTags = podLabels
-	puPolicy.PolicyIPs = []string{pod.Status.PodIP}
 	return puPolicy, nil
 }
 
