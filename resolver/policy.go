@@ -215,7 +215,7 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 
 	ips := map[string]string{"default": pod.Status.PodIP}
 
-	puPolicy, err := createPolicyRules(allRules, kubernetesNamespace, allNamespaces, policy.NewTagsMap(podLabels), policy.NewIPMap(ips))
+	puPolicy, err := generatePUPolicy(allRules, kubernetesNamespace, allNamespaces, policy.NewTagsMap(podLabels), policy.NewIPMap(ips))
 	if err != nil {
 		return nil, err
 	}
