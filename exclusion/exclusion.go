@@ -43,6 +43,7 @@ func NewWatcher(triremeNets []string, kubeClient kubernetes.Client, excluder sup
 
 	watcher.serviceControllerStop = make(chan struct{})
 	_, watcher.serviceController = kubeClient.CreateServiceController(
+		"",
 		watcher.addService,
 		watcher.deleteService,
 		watcher.updateService)

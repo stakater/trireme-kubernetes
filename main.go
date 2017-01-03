@@ -14,7 +14,7 @@ import (
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme/configurator"
 	"github.com/aporeto-inc/trireme/enforcer"
-	"github.com/aporeto-inc/trireme/enforcer/tokens"
+	"github.com/aporeto-inc/trireme/enforcer/utils/tokens"
 	"github.com/aporeto-inc/trireme/monitor"
 	"github.com/aporeto-inc/trireme/supervisor"
 
@@ -47,7 +47,7 @@ func main() {
 	if config.AuthType == "PSK" {
 		glog.V(2).Infof("Starting Trireme PSK")
 		// Starting PSK Trireme
-		trireme, monitor, excluder = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK), nil)
+		trireme, monitor, excluder = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK), nil, false)
 
 	}
 
@@ -60,7 +60,7 @@ func main() {
 			return
 		}
 		// Starting PKI Trireme
-		trireme, monitor, excluder, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM, nil)
+		trireme, monitor, excluder, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM, nil, false)
 
 		// Sync the Trireme certs over all the Kubernetes Cluster. Annotations on the
 		// node object are used to hold those certs.
