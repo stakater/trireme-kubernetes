@@ -116,7 +116,7 @@ func (c *Client) CreateNodeController(
 }
 
 // CreateServiceController creates a controller specifically for Services.
-func (c *Client) CreateServiceController(
+func (c *Client) CreateServiceController(namespace string,
 	addFunc func(addedApiStruct *api.Service) error, deleteFunc func(deletedApiStruct *api.Service) error, updateFunc func(oldApiStruct, updatedApiStruct *api.Service) error) (cache.Store, *cache.Controller) {
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "services", "", &api.Service{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
