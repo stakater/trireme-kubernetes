@@ -1,7 +1,7 @@
 # trireme-kubernetes
 
 [![Twitter URL](https://img.shields.io/badge/twitter-follow-blue.svg)](https://twitter.com/aporeto_trireme) [![Slack URL](https://img.shields.io/badge/slack-join-green.svg)](https://triremehq.slack.com/messages/general/) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Documentation](https://img.shields.io/badge/docs-godoc-blue.svg)](https://godoc.org/github.com/aporeto-inc/trireme)
-
+[![Analytics](https://ga-beacon.appspot.com/UA-90327502-1/welcome-page)](https://github.com/igrigorik/ga-beacon)
 
 Integration with the NetworkPolicy framework from Kubernetes.
 Kubernetes defines an API for NetworkPolicies. More info over here:
@@ -79,4 +79,3 @@ wget http://<BACKEND_IP>
 * Trireme requires access to the Docker event API socket (`/var/run/docker.sock` by default)
 * Trireme requires privileged access
 
-[![Analytics](https://ga-beacon.appspot.com/UUA-90327502-1/welcome-page)](https://github.com/igrigorik/ga-beacon)
