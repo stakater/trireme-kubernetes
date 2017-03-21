@@ -89,5 +89,5 @@ Finally, another option is to directly launch the binary on the host.
 a helper script is provided here with the same configuration variable as in Kubernetes.
 
 ```
-deployment/Trireme/docker/run.sh
+deployment/Trireme/daemon/run.sh
 ```
