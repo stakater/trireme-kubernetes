@@ -11,6 +11,7 @@ spec:
         app: trireme
     spec:
       hostNetwork: true
+      hostPID: true
       containers:
         -  name: trireme
            image: aporeto/trireme-kubernetes
@@ -32,7 +33,7 @@ spec:
            securityContext:
              privileged: true
            volumeMounts:
-             - mountPath: /var/run/docker.sock
+             - mountPath: /var/run
                name: dockersock
                readOnly: false
              - mountPath: /var/trireme
@@ -41,7 +42,7 @@ spec:
       volumes:
         - name: dockersock
           hostPath:
-            path: /var/run/docker.sock
+            path: /var/run
         - name: triremecerts
           hostPath:
             path: /var/trireme
