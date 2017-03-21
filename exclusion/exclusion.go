@@ -8,8 +8,8 @@ import (
 	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 	"github.com/aporeto-inc/trireme/supervisor"
 	"github.com/golang/glog"
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/client/cache"
+	api "k8s.io/client-go/pkg/api/v1"
+	"k8s.io/client-go/tools/cache"
 )
 
 // Watcher is maintaining the state of the ExclusionList.
@@ -18,7 +18,7 @@ type Watcher struct {
 	triremeNets           []*net.IPNet
 	excluder              supervisor.Excluder
 	excludedIPs           map[string]struct{}
-	serviceController     *cache.Controller
+	serviceController     cache.Controller
 	serviceControllerStop chan struct{}
 	mutex                 sync.Mutex
 }
@@ -37,7 +37,7 @@ func NewWatcher(triremeNets []string, kubeClient kubernetes.Client, excluder sup
 		kubeClient:  kubeClient,
 		triremeNets: ipNets,
 		excluder:    excluder,
-		excludedIPs: map[string]struct{}{},
+		excludedIPs: make(map[string]struct{}),
 		mutex:       sync.Mutex{},
 	}
 
@@ -87,29 +87,40 @@ func (w *Watcher) deleteService(deletedAPIStruct *api.Service) error {
 }
 
 func (w *Watcher) updateService(oldAPIStruct, updatedAPIStruct *api.Service) error {
+	//TODO: Check if Service IP has changed ?
 	return nil
 }
 
 func (w *Watcher) excludeServiceIP(ip string) error {
 	glog.V(2).Infof("Excluding IP %s", ip)
-	if err := w.excluder.AddExcludedIP(ip + "/32"); err != nil {
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
+
+	if _, ok := w.excludedIPs[ip]; ok {
+		// IP is already excluded.
+		return nil
+	}
+
+	w.excludedIPs[ip] = struct{}{}
+	if err := w.excluder.AddExcludedIPs(getKeysFromMap(w.excludedIPs)); err != nil {
 		return fmt.Errorf("Error excluding IP: %s", err)
 	}
-	w.mutex.Lock()
-	w.excludedIPs[ip] = struct{}{}
-	w.mutex.Unlock()
 	return nil
 }
 
 func (w *Watcher) restoreServiceIP(ip string) error {
 	glog.V(2).Infof("Restoring IP %s", ip)
+	w.mutex.Lock()
+	defer w.mutex.Unlock()
 
-	if err := w.excluder.RemoveExcludedIP(ip + "/32"); err != nil {
+	if _, ok := w.excludedIPs[ip]; !ok {
+		return fmt.Errorf("IP %s is not currently excluded", ip)
+	}
+	delete(w.excludedIPs, ip)
+
+	if err := w.excluder.AddExcludedIPs(getKeysFromMap(w.excludedIPs)); err != nil {
 		return fmt.Errorf("Error restoring IP: %s", err)
 	}
-	w.mutex.Lock()
-	delete(w.excludedIPs, ip)
-	w.mutex.Unlock()
 	return nil
 }
 
@@ -132,4 +143,16 @@ func (w *Watcher) isInTriremeNets(ip string) bool {
 		}
 	}
 	return false
+}
+
+func getKeysFromMap(ips map[string]struct{}) []string {
+	keys := make([]string, len(ips))
+
+	i := 0
+	for key := range ips {
+		keys[i] = key
+		i++
+	}
+
+	return keys
 }

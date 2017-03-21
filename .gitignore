@@ -2,3 +2,6 @@
 docker/app
 trireme-kubernetes
 testresults.xml
+glide.lock
+vendor/
+run.sh

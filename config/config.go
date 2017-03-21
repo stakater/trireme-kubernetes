@@ -10,6 +10,12 @@ import (
 	"github.com/golang/glog"
 )
 
+// EnvTrue is the string for true
+const EnvTrue = "true"
+
+// EnvFalse is the string for false
+const EnvFalse = "false"
+
 // EnvNodeName is the default env. name used for the Kubernetes node name.
 const EnvNodeName = "KUBERNETES_NODE"
 
@@ -56,6 +62,18 @@ const EnvTriremeNets = "TRIREME_NETS"
 // DefaultTriremeNets is the default Kubernetes Network subnet.
 const DefaultTriremeNets = "10.0.0.0/8"
 
+// EnvTriremeEnforcer is the env. variable that will contain the value for the Trireme Enforcer
+const EnvTriremeEnforcer = "ENFORCER"
+
+// DefaultTriremeEnforcer is the default Kubernetes Enforcer status.
+const DefaultTriremeEnforcer = false
+
+// RemoteEnforcer is the env. variable that will contain the value for the Remote Trireme Enforcer
+const RemoteEnforcer = "REMOTE_ENFORCER"
+
+// DefaultRemoteEnforcer is the default Kubernetes Remote Enforcer status.
+const DefaultRemoteEnforcer = true
+
 // TriKubeConfig maintains the Configuration of Kubernetes Integration
 type TriKubeConfig struct {
 	KubeEnv               bool
@@ -67,6 +85,9 @@ type TriKubeConfig struct {
 	TriremePSK            string
 	TriremeNets           []string
 	ExistingContainerSync bool
+	Enforcer              bool
+	RemoteEnforcer        bool
+	LogLevel              string
 }
 
 func usage() {
@@ -89,11 +110,37 @@ func LoadConfig() *TriKubeConfig {
 	var flagKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kubernetes")
 	var flagtSyncExistingContainers = flag.Bool("syncexisting", true, "Sync existing containers")
 	var flagTriremeNets = flag.String("triremenets", "", "Subnets with Trireme endpoints.")
+	var flagEnforcer = flag.Bool("enforcer", false, "Use the Trireme Enforcer.")
+	var flagRemoteEnforcer = flag.Bool("remote", true, "Use the Trireme Remote Enforcer.")
 
 	flag.Usage = usage
 	flag.Parse()
 
 	config := &TriKubeConfig{}
+
+	// TODO: Based on the V Level
+	config.LogLevel = "debug"
+
+	if os.Getenv(EnvTriremeEnforcer) == "" {
+		config.Enforcer = *flagEnforcer
+	}
+	if os.Getenv(EnvTriremeEnforcer) == EnvTrue {
+		config.Enforcer = true
+	}
+	if os.Getenv(EnvTriremeEnforcer) == EnvFalse {
+		config.Enforcer = false
+	}
+
+	// TODO: Remove once we move to DocOps
+	if len(os.Args) >= 2 {
+		if os.Args[1] == "enforce" {
+			config.Enforcer = true
+		}
+	}
+
+	if config.Enforcer {
+		return config
+	}
 
 	if os.Getenv("KUBERNETES_PORT") == "" {
 		config.KubeEnv = false
@@ -158,11 +205,21 @@ func LoadConfig() *TriKubeConfig {
 	if os.Getenv(EnvSyncExistingContainers) == "" {
 		config.ExistingContainerSync = *flagtSyncExistingContainers
 	}
-	if os.Getenv(EnvSyncExistingContainers) == "true" {
+	if os.Getenv(EnvSyncExistingContainers) == EnvTrue {
 		config.ExistingContainerSync = true
 	}
-	if os.Getenv(EnvSyncExistingContainers) == "false" {
+	if os.Getenv(EnvSyncExistingContainers) == EnvFalse {
 		config.ExistingContainerSync = false
+	}
+
+	if os.Getenv(RemoteEnforcer) == "" {
+		config.RemoteEnforcer = *flagRemoteEnforcer
+	}
+	if os.Getenv(RemoteEnforcer) == EnvTrue {
+		config.RemoteEnforcer = true
+	}
+	if os.Getenv(RemoteEnforcer) == EnvFalse {
+		config.RemoteEnforcer = false
 	}
 
 	triremeNets := *flagTriremeNets

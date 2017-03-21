@@ -13,7 +13,7 @@ spec:
       hostNetwork: true
       containers:
         -  name: trireme
-           image: aporeto/trireme-kubernetes
+           image: aporeto/trireme-gke
            env:
              - name: SYNC_EXISTING_CONTAINERS
                value: "true"

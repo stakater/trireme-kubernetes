@@ -11,4 +11,4 @@ ADD trireme-kubernetes /opt/trireme/trireme-kubernetes
 ADD run.sh /opt/trireme/run.sh
 
 WORKDIR /opt/trireme
-CMD ./run.sh
+CMD ./trireme-kubernetes --logtostderr=1 --v=6

@@ -3,14 +3,14 @@ package resolver
 import (
 	"fmt"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	api "k8s.io/client-go/pkg/api/v1"
+	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+
 	"github.com/aporeto-inc/trireme/policy"
 	"github.com/golang/glog"
-
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/apis/extensions"
-	metav1 "k8s.io/kubernetes/pkg/apis/meta/v1"
-	"k8s.io/kubernetes/pkg/labels"
-	"k8s.io/kubernetes/pkg/selection"
 )
 
 func clauseEquals(requirement labels.Requirement) []policy.KeyValueOperator {
@@ -206,18 +206,52 @@ func namespaceRules(rule *extensions.NetworkPolicyIngressRule, podNamespace stri
 }
 
 // aclRules generate the IPRules used as ACLs outside of Trireme cluster.
-func aclRules() ([]policy.IPRule, error) {
+func aclRules(rule extensions.NetworkPolicyIngressRule) ([]policy.IPRule, error) {
+	aclPolicy := []policy.IPRule{}
+	if rule.Ports == nil {
+		return nil, fmt.Errorf("Ports entry is nil")
+	}
+
+	for _, portEntry := range rule.Ports {
+		proto := "TCP"
+		if *portEntry.Protocol == api.ProtocolUDP {
+			proto = "UDP"
+		}
+
+		iPruleTCP := policy.IPRule{
+			Address:  "0.0.0.0/0",
+			Port:     portEntry.Port.String(),
+			Protocol: proto,
+			Action:   policy.Accept,
+		}
+
+		iPruleUDP := policy.IPRule{
+			Address:  "0.0.0.0/0",
+			Port:     portEntry.Port.String(),
+			Protocol: proto,
+			Action:   policy.Accept,
+		}
+		aclPolicy = append(aclPolicy, iPruleTCP, iPruleUDP)
+	}
+
+	return aclPolicy, nil
+}
+
+// aclRules generate the IPRules used as ACLs outside of Trireme cluster.
+func aclAllowAllRules() []policy.IPRule {
 	iPruleTCP := policy.IPRule{
 		Address:  "0.0.0.0/0",
-		Port:     "80",
+		Port:     "0:65535",
 		Protocol: "TCP",
+		Action:   policy.Accept,
 	}
 	iPruleUDP := policy.IPRule{
 		Address:  "0.0.0.0/0",
-		Port:     "80",
+		Port:     "0:65535",
 		Protocol: "UDP",
+		Action:   policy.Accept,
 	}
-	return []policy.IPRule{iPruleTCP, iPruleUDP}, nil
+	return []policy.IPRule{iPruleTCP, iPruleUDP}
 }
 
 // logRules logs all the rules currently used. Useful for debugging.
@@ -230,11 +264,31 @@ func logRules(containerPolicy *policy.PUPolicy) {
 }
 
 // generatePUPolicy creates a PUPolicy representation
-func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList, tags *policy.TagsMap, ips *policy.IPMap) (*policy.PUPolicy, error) {
+func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList, tags *policy.TagsMap, ips *policy.IPMap, triremeNets []string) (*policy.PUPolicy, error) {
 	receiverRules := []policy.TagSelector{}
 	ipRules := []policy.IPRule{}
 
 	for _, rule := range *rules {
+
+		// Not matching any traffic. Go to next rule
+		if len(rule.From) == 0 || len(rule.Ports) == 0 {
+			continue
+		}
+
+		// From is not set, Only using the Port information.
+		if rule.From == nil {
+			// Ports also not set: Allow All!
+			if rule.Ports == nil {
+				return allowAllPolicy(tags, ips, triremeNets), nil
+			}
+
+			aclSelectorRules, err := aclRules(rule)
+			if err != nil {
+				return nil, fmt.Errorf("Error creating pod ACLRules: %s", err)
+			}
+			ipRules = append(ipRules, aclSelectorRules...)
+			continue
+		}
 
 		// Phase1: populate the clauses related to each individual rules.
 		podSelectorRules, err := podRules(&rule, podNamespace)
@@ -250,19 +304,14 @@ func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace
 		}
 		receiverRules = append(receiverRules, namespaceSelectorRules...)
 
-		// Phase3: populate the network rules.
-		aclSelectorRules, err := aclRules()
-		if err != nil {
-			return nil, fmt.Errorf("Error creating pod ACLRules: %s", err)
-		}
-		ipRules = append(ipRules, aclSelectorRules...)
-
 	}
 	ingressACLs := policy.NewIPRuleList(ipRules)
-	egressACLs := policy.NewIPRuleList(ipRules)
+
+	// Egress Allow All as per Network Policy definition.
+	egressACLs := policy.NewIPRuleList(aclAllowAllRules())
 	receiverRulesList := policy.NewTagSelectorList(receiverRules)
 
-	containerPolicy := policy.NewPUPolicy("", policy.Police, ingressACLs, egressACLs, nil, receiverRulesList, tags, tags, ips, nil)
+	containerPolicy := policy.NewPUPolicy("", policy.Police, egressACLs, ingressACLs, nil, receiverRulesList, tags, tags, ips, triremeNets, nil)
 
 	logRules(containerPolicy)
 	return containerPolicy, nil
@@ -270,7 +319,7 @@ func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace
 
 // allowAllPolicy returns a simple generic policy used in order to not police the PU.
 // example: The NS is not networkPolicy activated.
-func allowAllPolicy(tags *policy.TagsMap, ipMap *policy.IPMap) *policy.PUPolicy {
+func allowAllPolicy(tags *policy.TagsMap, ipMap *policy.IPMap, triremeNets []string) *policy.PUPolicy {
 	completeClause := []policy.KeyValueOperator{
 		policy.KeyValueOperator{
 			Key:      "@namespace",
@@ -282,21 +331,12 @@ func allowAllPolicy(tags *policy.TagsMap, ipMap *policy.IPMap) *policy.PUPolicy 
 		Clause: completeClause,
 		Action: policy.Accept,
 	}
-	iPruleTCP := policy.IPRule{
-		Address:  "0.0.0.0/0",
-		Port:     "0:65535",
-		Protocol: "TCP",
-	}
-	iPruleUDP := policy.IPRule{
-		Address:  "0.0.0.0/0",
-		Port:     "0:65535",
-		Protocol: "UDP",
-	}
+	allowAllRules := aclAllowAllRules()
 	receivingRules := policy.NewTagSelectorList([]policy.TagSelector{selector})
-	ingressACLs := policy.NewIPRuleList([]policy.IPRule{iPruleTCP, iPruleUDP})
-	egressACLs := policy.NewIPRuleList([]policy.IPRule{iPruleTCP, iPruleUDP})
+	ingressACLs := policy.NewIPRuleList([]policy.IPRule{allowAllRules[0], allowAllRules[1]})
+	egressACLs := policy.NewIPRuleList([]policy.IPRule{allowAllRules[0], allowAllRules[1]})
 
-	return policy.NewPUPolicy("", policy.AllowAll, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ipMap, nil)
+	return policy.NewPUPolicy("", policy.AllowAll, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ipMap, triremeNets, nil)
 }
 
 // notInfraContainerPolicy is a policy that should apply to the other containers in a PoD that are not the infra container.

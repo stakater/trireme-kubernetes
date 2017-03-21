@@ -13,9 +13,9 @@ spec:
         matchLabels:
          role: WebFrontend
     ports:
-     - protocol: tcp
+     - protocol: TCP
        port: 80
-     - protocol: tcp
+     - protocol: TCP
        port: 8080
 ---
 apiVersion: extensions/v1beta1
@@ -36,9 +36,9 @@ spec:
         matchLabels:
          role: BusinessBackend
     ports:
-     - protocol: tcp
+     - protocol: TCP
        port: 80
-     - protocol: tcp
+     - protocol: TCP
        port: 8080
 ---
 apiVersion: extensions/v1beta1
@@ -59,7 +59,7 @@ spec:
         matchLabels:
          role: Database
     ports:
-     - protocol: tcp
+     - protocol: TCP
        port: 80
-     - protocol: tcp
+     - protocol: TCP
        port: 8080

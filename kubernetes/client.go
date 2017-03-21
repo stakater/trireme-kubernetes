@@ -5,18 +5,19 @@ import (
 
 	"github.com/aporeto-inc/kubepox"
 
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/apis/extensions"
-	metav1 "k8s.io/kubernetes/pkg/apis/meta/v1"
-	client "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
-	"k8s.io/kubernetes/pkg/client/restclient"
-	"k8s.io/kubernetes/pkg/client/unversioned/clientcmd"
-	"k8s.io/kubernetes/pkg/fields"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+
+	"k8s.io/client-go/kubernetes"
+	api "k8s.io/client-go/pkg/api/v1"
+	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 )
 
 // Client is the Trireme representation of the Client.
 type Client struct {
-	kubeClient *client.Clientset
+	kubeClient kubernetes.Interface
 	localNode  string
 }
 
@@ -51,7 +52,7 @@ func (c *Client) InitKubernetesClient(kubeconfig string) error {
 		}
 	}
 
-	myClient, err := client.NewForConfig(config)
+	myClient, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		return fmt.Errorf("Error creating REST Kube Client: %v", err)
 	}
@@ -65,24 +66,21 @@ func (c *Client) localNodeSelector() fields.Selector {
 	}).AsSelector()
 }
 
-func (c *Client) localNodeOption() api.ListOptions {
-	return api.ListOptions{
-		FieldSelector: c.localNodeSelector(),
+func (c *Client) localNodeOption() metav1.ListOptions {
+	return metav1.ListOptions{
+		FieldSelector: c.localNodeSelector().String(),
 	}
 }
 
 // PodRules return the list of all the IngressRules that apply to the pod.
-func (c *Client) PodRules(podName string, namespace string) (*[]extensions.NetworkPolicyIngressRule, error) {
+func (c *Client) PodRules(podName string, namespace string, allPolicies *extensions.NetworkPolicyList) (*[]extensions.NetworkPolicyIngressRule, error) {
 	// Step1: Get all the rules associated with this Pod.
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
+	targetPod, err := c.kubeClient.Core().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get pod %v from Kubernetes API: %v", podName, err)
 	}
 
-	allPolicies, err := c.kubeClient.Extensions().NetworkPolicies(namespace).List(api.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("Couldn't list all the NetworkPolicies from Kubernetes API: %v ", err)
-	}
+	// TODO: Get those.
 
 	allRules, err := kubepox.ListIngressRulesPerPod(targetPod, allPolicies)
 	if err != nil {
@@ -94,7 +92,7 @@ func (c *Client) PodRules(podName string, namespace string) (*[]extensions.Netwo
 // Endpoints return the list of all the Endpoints that are serviced by a specific service/namespace.
 func (c *Client) Endpoints(service string, namespace string) (*api.Endpoints, error) {
 	// Step1: Get all the rules associated with this Pod.
-	endpoints, err := c.kubeClient.Endpoints(namespace).Get(service, metav1.GetOptions{})
+	endpoints, err := c.kubeClient.Core().Endpoints(namespace).Get(service, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get endpoints for service %s from Kubernetes API: %s", service, err)
 	}
@@ -103,7 +101,7 @@ func (c *Client) Endpoints(service string, namespace string) (*api.Endpoints, er
 
 // PodLabels returns the list of all labels associated with a pod.
 func (c *Client) PodLabels(podName string, namespace string) (map[string]string, error) {
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
+	targetPod, err := c.kubeClient.Core().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error getting Kubernetes labels for pod %v : %v ", podName, err)
 	}
@@ -112,7 +110,7 @@ func (c *Client) PodLabels(podName string, namespace string) (map[string]string,
 
 // PodIP returns the pod's IP.
 func (c *Client) PodIP(podName string, namespace string) (string, error) {
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
+	targetPod, err := c.kubeClient.Core().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return "", fmt.Errorf("error getting Kubernetes IP for pod %v : %v ", podName, err)
 	}
@@ -121,7 +119,7 @@ func (c *Client) PodIP(podName string, namespace string) (string, error) {
 
 // PodLabelsAndIP returns the list of all labels associated with a pod as well as the Pod's IP.
 func (c *Client) PodLabelsAndIP(podName string, namespace string) (map[string]string, string, error) {
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
+	targetPod, err := c.kubeClient.Core().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, "", fmt.Errorf("error getting Kubernetes labels & IP for pod %v : %v ", podName, err)
 	}
@@ -134,7 +132,7 @@ func (c *Client) PodLabelsAndIP(podName string, namespace string) (map[string]st
 
 // Pod returns the full pod object.
 func (c *Client) Pod(podName string, namespace string) (*api.Pod, error) {
-	targetPod, err := c.kubeClient.Pods(namespace).Get(podName, metav1.GetOptions{})
+	targetPod, err := c.kubeClient.Core().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("error getting Kubernetes labels & IP for pod %v : %v ", podName, err)
 	}
@@ -143,18 +141,18 @@ func (c *Client) Pod(podName string, namespace string) (*api.Pod, error) {
 
 // LocalPods return a PodList with all the pods scheduled on the local node
 func (c *Client) LocalPods(namespace string) (*api.PodList, error) {
-	return c.kubeClient.Pods(namespace).List(c.localNodeOption())
+	return c.kubeClient.Core().Pods(namespace).List(c.localNodeOption())
 }
 
 // AllNamespaces return a list of all existing namespaces
 func (c *Client) AllNamespaces() (*api.NamespaceList, error) {
-	return c.kubeClient.Namespaces().List(api.ListOptions{})
+	return c.kubeClient.Core().Namespaces().List(metav1.ListOptions{})
 }
 
 // AddLocalNodeAnnotation adds the annotationKey:annotationValue
 func (c *Client) AddLocalNodeAnnotation(annotationKey, annotationValue string) error {
 	nodeName := c.localNode
-	node, err := c.kubeClient.Nodes().Get(nodeName, metav1.GetOptions{})
+	node, err := c.kubeClient.Core().Nodes().Get(nodeName, metav1.GetOptions{})
 	if err != nil {
 		return fmt.Errorf("Couldn't get node %s: %s", nodeName, err)
 	}
@@ -162,7 +160,7 @@ func (c *Client) AddLocalNodeAnnotation(annotationKey, annotationValue string) e
 	annotations := node.GetAnnotations()
 	annotations[annotationKey] = annotationValue
 	node.SetAnnotations(annotations)
-	_, err = c.kubeClient.Nodes().Update(node)
+	_, err = c.kubeClient.Core().Nodes().Update(node)
 	if err != nil {
 		return fmt.Errorf("Error updating Annotations for node %s: %s", nodeName, err)
 	}
@@ -171,7 +169,7 @@ func (c *Client) AddLocalNodeAnnotation(annotationKey, annotationValue string) e
 
 // AllNodes return a list of all the nodes on the KubeCluster.
 func (c *Client) AllNodes() (*api.NodeList, error) {
-	nodes, err := c.kubeClient.Nodes().List(api.ListOptions{})
+	nodes, err := c.kubeClient.Core().Nodes().List(metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get nodes list : %s", err)
 	}
@@ -179,6 +177,6 @@ func (c *Client) AllNodes() (*api.NodeList, error) {
 }
 
 // KubeClient returns the Kubernetes ClientSet
-func (c *Client) KubeClient() *client.Clientset {
+func (c *Client) KubeClient() kubernetes.Interface {
 	return c.kubeClient
 }

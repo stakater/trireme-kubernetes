@@ -2,32 +2,47 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 
 	"github.com/aporeto-inc/trireme-kubernetes/auth"
 	"github.com/aporeto-inc/trireme-kubernetes/config"
-	"github.com/aporeto-inc/trireme-kubernetes/exclusion"
 	"github.com/aporeto-inc/trireme-kubernetes/resolver"
 
 	"github.com/aporeto-inc/trireme"
+	"github.com/aporeto-inc/trireme/cmd/remoteenforcer"
 	"github.com/aporeto-inc/trireme/configurator"
 	"github.com/aporeto-inc/trireme/enforcer"
 	"github.com/aporeto-inc/trireme/enforcer/utils/tokens"
 	"github.com/aporeto-inc/trireme/monitor"
 	"github.com/aporeto-inc/trireme/supervisor"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/golang/glog"
 )
 
 func main() {
 	config := config.LoadConfig()
+	log.SetFormatter(&log.TextFormatter{})
+	log.SetOutput(os.Stdout)
+	log.SetLevel(log.DebugLevel)
+
+	if config.Enforcer {
+		fmt.Println("Launching enforcer:")
+
+		log.WithFields(log.Fields{
+			"package": "main",
+		}).Info("Enforcer tarted")
+
+		glog.V(2).Infof("Launching enforcer: %+v ", config)
+		remoteenforcer.LaunchRemoteEnforcer(nil, log.DebugLevel)
+		return
+	}
 
 	glog.V(2).Infof("Config used: %+v ", config)
 
 	// Create New PolicyEngine for Kubernetes
-	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeConfigLocation, config.KubeNodeName)
+	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeConfigLocation, config.KubeNodeName, config.TriremeNets)
 	if err != nil {
 		fmt.Printf("Error initializing KubernetesPolicy, exiting: %s \n", err)
 		return
@@ -47,7 +62,7 @@ func main() {
 	if config.AuthType == "PSK" {
 		glog.V(2).Infof("Starting Trireme PSK")
 		// Starting PSK Trireme
-		trireme, monitor, excluder = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK), nil, false)
+		trireme, monitor, excluder = configurator.NewPSKTriremeWithDockerMonitor(config.KubeNodeName, kubernetesPolicy, nil, nil, config.ExistingContainerSync, []byte(config.TriremePSK), nil, config.RemoteEnforcer)
 
 	}
 
@@ -60,7 +75,7 @@ func main() {
 			return
 		}
 		// Starting PKI Trireme
-		trireme, monitor, excluder, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, config.TriremeNets, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM, nil, false)
+		trireme, monitor, excluder, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM, nil, config.RemoteEnforcer)
 
 		// Sync the Trireme certs over all the Kubernetes Cluster. Annotations on the
 		// node object are used to hold those certs.
@@ -78,12 +93,14 @@ func main() {
 	// Register the IPExcluder to the  Kubernetes policy resolver
 	kubernetesPolicy.SetExcluder(excluder)
 
-	exclusionWatcher, err := exclusion.NewWatcher(config.TriremeNets, *kubernetesPolicy.KubernetesClient, excluder)
-	if err != nil {
-		log.Fatalf("Error creating the exclusion Watcher: %s", err)
-	}
+	/*
+		exclusionWatcher, err := exclusion.NewWatcher(config.TriremeNets, *kubernetesPolicy.KubernetesClient, excluder)
+		if err != nil {
+			log.Fatalf("Error creating the exclusion Watcher: %s", err)
+		}
 
-	go exclusionWatcher.Start()
+		go exclusionWatcher.Start()
+	*/
 
 	// Start all the go routines.
 	trireme.Start()

@@ -3,8 +3,8 @@ package auth
 import (
 	"fmt"
 
-	"k8s.io/kubernetes/pkg/api"
-	"k8s.io/kubernetes/pkg/watch"
+	"k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/pkg/api"
 
 	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 	"github.com/aporeto-inc/trireme/enforcer"
