@@ -2,8 +2,6 @@ package: github.com/aporeto-inc/trireme-kubernetes
 import:
 - package: github.com/aporeto-inc/kubepox
 - package: github.com/aporeto-inc/trireme
-  vcs: git
-  ref: sandboxkey_fix
   subpackages:
   - configurator
   - enforcer
