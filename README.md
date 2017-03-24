@@ -3,18 +3,20 @@
 [![Twitter URL](https://img.shields.io/badge/twitter-follow-blue.svg)](https://twitter.com/aporeto_trireme) [![Slack URL](https://img.shields.io/badge/slack-join-green.svg)](https://triremehq.slack.com/messages/general/) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Documentation](https://img.shields.io/badge/docs-godoc-blue.svg)](https://godoc.org/github.com/aporeto-inc/trireme)
 [![Analytics](https://ga-beacon.appspot.com/UA-90327502-1/welcome-page)](https://github.com/igrigorik/ga-beacon)
 
-Integration with the NetworkPolicy framework from Kubernetes.
+Trireme-kubernetes is a Zero-Trust networking implementation (based on the Trireme library) specifically for Kubernetes.
 Kubernetes defines an API for NetworkPolicies. More info over here:
 
 * http://kubernetes.io/docs/user-guide/networkpolicies/
 * http://kubernetes.io/docs/api-reference/extensions/v1beta1/definitions/#_v1beta1_networkpolicy
 
 Kubernetes does not enforce natively those NetworkPolicies and requires another library/solution to perform the actual enforcement.
-The implementation of network policy with Trireme does not rely on any complex control-plane or setup. Enforcement is performed directly on every minion without any shared state (more info at  [Trireme ](https://github.com/aporeto-inc/trireme) )
 
-Kubernetes NetworkPolicies are entirely based on `labels` and `selectors` to hide all the actual IPs for the different endpoints. Trireme is using that exact same approach. IP information is irrelevant even for enforcement. Everything is based on labels.
+The Trireme-kubernetes solution does not rely on any complex control-plane or setup. Any other networking backend can be used.
+Enforcement is performed directly on every node without any shared state propagation (more info at  [Trireme ](https://github.com/aporeto-inc/trireme))
 
-In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is to launch the Trireme run-time on each node.
+Kubernetes NetworkPolicies are entirely based on `labels` and `selectors` to hide all the actual IPs for the different endpoints. Trireme is using that exact same approach. IP information is irrelevant even for enforcement. Everything is based on Pod labels.
+
+In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is to launch the kubernetes-trireme run-time on each node.
 
 ![Kubernetes cluster with Trireme](docs/pods.png)
 
@@ -74,8 +76,8 @@ wget http://<BACKEND_IP>
 
 ## Prerequisites
 
-* Trireme requires bridged-based networking solutions for which we can redirect traffic to IPTables (Flannel, default docker networks, ...). We are working on a generic solution that allows any traffic backed by any networking vendor to always be redirected from the namespace to IPTables. We have tested with Flannel backed clusters and default Docker networking (bridged) backed clusters.
-* Trireme requires IPTables with access to the `Raw` and `Mangle` modules.
+* Trireme requires IPTables with access to the `Mangle` module.
 * Trireme requires access to the Docker event API socket (`/var/run/docker.sock` by default)
 * Trireme requires privileged access
-
+* Trireme requires to run on the Host PID Namespace.
+* When deploying with the DaemonSet model, Trireme requires access to the in-cluster service API/Token. The Namespaces/Pods/NetworkPolicies must be available as read-only
