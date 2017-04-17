@@ -20,6 +20,8 @@ In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is 
 
 ![Kubernetes cluster with Trireme](docs/pods.png)
 
+:warning: **There is an ongoing bug in Kubernetes 1.6.0 (See  kubernetes/kubernetes#44041) that ignores the Trireme-Kubernetes daemon set request to be launched in the HostPID namespace. This should be resolved in 1.6.2, in the meantime Kubernetes-Trireme cannot be launched as a DaemonSet on 1.6.0** 
+
 ## Run-Time deployment.
 
 That run-time can be launched as:
