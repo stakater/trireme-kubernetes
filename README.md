@@ -36,10 +36,10 @@ More details on those [options and deployment configuration](https://github.com/
 
 One of the key features of Trireme is the built-in authentication scheme for different nodes belonging to the same cluster.
 This cryptographic authentication ensures that every label set on a `pod` and used into the NetworkingPolicies rules is protected against man-in-the-middle type attacks.
-This authentication can be based on a full Public Key infrastructure (recommended) or on a PreSharedKey.
+This authentication can be based on a full Public Key infrastructure (recommended) or on a PreSharedKey (Should only be used for testing purposes).
 
 * When using `PKI`, The PrivateKey and corresponding CA certificate must be available locally on the node. The run-time uses the Private key for signing all the labels sent on the wire. The corresponding certificate is also published as an `annotation` on the node object in Kubernetes API and can be pre-distributed through the control plane. Each node retrieves the certificate corresponding to all the other nodes by watching the node annotations. (this is optional).
-* For `PreSharedKey` , the key must be available as an  environment variable. If using the `daemonSet` method for deployment, a Kubernetes secret is the safest and simplest method to share a PSK for the whole cluster.
+* For `PreSharedKey` , the key must be available as an  environment variable. If using the `daemonSet` method for deployment, a Kubernetes secret is the simplest method to share a PSK for the whole cluster. This method of distribution is not safe however (See issues around secrets retrieval), it is therefore not recommended to use a PSK or Secrets for distribution for any other purpose than proof of concepts.
 
 ## Try it!
 
