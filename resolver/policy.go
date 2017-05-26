@@ -3,7 +3,6 @@ package resolver
 import (
 	"encoding/json"
 	"fmt"
-	"net"
 
 	"k8s.io/apimachinery/pkg/labels"
 	api "k8s.io/client-go/pkg/api/v1"
@@ -15,18 +14,17 @@ import (
 
 	"github.com/aporeto-inc/trireme/monitor"
 	"github.com/aporeto-inc/trireme/policy"
-	"github.com/aporeto-inc/trireme/supervisor"
 	"github.com/golang/glog"
 )
 
 // KubernetesPodName is the label used by Docker for the K8S pod name.
-const KubernetesPodName = "io.kubernetes.pod.name"
+const KubernetesPodName = "@usr:io.kubernetes.pod.name"
 
 // KubernetesPodNamespace is the label used by Docker for the K8S namespace.
-const KubernetesPodNamespace = "io.kubernetes.pod.namespace"
+const KubernetesPodNamespace = "@usr:io.kubernetes.pod.namespace"
 
 // KubernetesContainerName is the label used by Docker for the K8S container name.
-const KubernetesContainerName = "io.kubernetes.container.name"
+const KubernetesContainerName = "@usr:io.kubernetes.container.name"
 
 // KubernetesInfraContainerName is the name of the infra POD.
 const KubernetesInfraContainerName = "POD"
@@ -41,8 +39,6 @@ const KubernetesNetworkPolicyAnnotationID = "net.beta.kubernetes.io/network-poli
 type KubernetesPolicy struct {
 	triremeNetworks   []string
 	policyUpdater     trireme.PolicyUpdater
-	excluder          supervisor.Excluder
-	localExcluded     bool
 	KubernetesClient  *kubernetes.Client
 	cache             *cache
 	stopAll           chan struct{}
@@ -60,7 +56,6 @@ func NewKubernetesPolicy(kubeconfig string, nodename string, triremeNetworks []s
 		triremeNetworks:  triremeNetworks,
 		cache:            newCache(),
 		KubernetesClient: client,
-		localExcluded:    false,
 	}, nil
 }
 
@@ -115,23 +110,6 @@ func (k *KubernetesPolicy) SetPolicyUpdater(policyUpdater trireme.PolicyUpdater)
 	return nil
 }
 
-// SetExcluder registers the interface used for updating Policies explicitely.
-func (k *KubernetesPolicy) SetExcluder(excluder supervisor.Excluder) error {
-	k.excluder = excluder
-	return nil
-}
-
-// excludeLocalIP registers the CNI Interface on the node for explicit allowance.
-// This is needed for HealtCheck and LocalHost communication to the Pod.
-func (k *KubernetesPolicy) excludeLocalIP(ip string) error {
-	parsedIP := net.ParseIP(ip)
-	ipb := parsedIP.To4()
-	ipb[3] = 1
-	k.localExcluded = true
-	return nil
-	//return k.excluder.AddExcludedIPs([]string{ipb.String() + "/32"})
-}
-
 // ResolvePolicy generates the Policy for the target PU.
 // The policy for the PU will be based on the defined
 // Kubernetes NetworkPolicies on the Pod to which the PU belongs.
@@ -139,6 +117,7 @@ func (k *KubernetesPolicy) ResolvePolicy(contextID string, runtimeGetter policy.
 
 	// Only the Infra Container should be policed. All the others should be AllowAll.
 	// The Infra container can be found by checking env. variable.
+
 	tagContent, ok := runtimeGetter.Tag(KubernetesContainerName)
 	if !ok || tagContent != KubernetesInfraContainerName {
 		// return AllowAll
@@ -182,11 +161,6 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	// If Pod is running in the hostNS , no need for activation.
 	if pod.Status.PodIP == pod.Status.HostIP {
 		return notInfraContainerPolicy(), nil
-	}
-
-	// TODO: Cleanup excluder code
-	if !k.localExcluded {
-		k.excludeLocalIP(pod.Status.PodIP)
 	}
 
 	podLabels := pod.GetLabels()

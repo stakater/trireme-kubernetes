@@ -89,7 +89,7 @@ func portSelector(ports []extensions.NetworkPolicyPort) []policy.KeyValueOperato
 		portList = append(portList, port.Port.String())
 	}
 	kvo := policy.KeyValueOperator{
-		Key:      "@port",
+		Key:      "$sys:port",
 		Operator: policy.Equal,
 		Value:    portList,
 	}
@@ -213,9 +213,13 @@ func aclRules(rule extensions.NetworkPolicyIngressRule) ([]policy.IPRule, error)
 	}
 
 	for _, portEntry := range rule.Ports {
-		proto := "TCP"
+		var proto string
 		if *portEntry.Protocol == api.ProtocolUDP {
 			proto = "UDP"
+		} else if *portEntry.Protocol == api.ProtocolTCP {
+			proto = "TCP"
+		} else {
+			return nil, fmt.Errorf("Unknown ProtocolType")
 		}
 
 		iPruleTCP := policy.IPRule{
@@ -261,6 +265,8 @@ func logRules(containerPolicy *policy.PUPolicy) {
 			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
 		}
 	}
+	glog.V(5).Infof("Trireme tags for container X : %+v ", containerPolicy.Identity())
+
 }
 
 // generatePUPolicy creates a PUPolicy representation
@@ -311,7 +317,8 @@ func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace
 	egressACLs := policy.NewIPRuleList(aclAllowAllRules())
 	receiverRulesList := policy.NewTagSelectorList(receiverRules)
 
-	containerPolicy := policy.NewPUPolicy("", policy.Police, egressACLs, ingressACLs, nil, receiverRulesList, tags, tags, ips, triremeNets, nil)
+	excluded := []string{}
+	containerPolicy := policy.NewPUPolicy("", policy.Police, egressACLs, ingressACLs, nil, receiverRulesList, tags, tags, ips, triremeNets, excluded, nil)
 
 	logRules(containerPolicy)
 	return containerPolicy, nil
@@ -336,7 +343,7 @@ func allowAllPolicy(tags *policy.TagsMap, ipMap *policy.IPMap, triremeNets []str
 	ingressACLs := policy.NewIPRuleList([]policy.IPRule{allowAllRules[0], allowAllRules[1]})
 	egressACLs := policy.NewIPRuleList([]policy.IPRule{allowAllRules[0], allowAllRules[1]})
 
-	return policy.NewPUPolicy("", policy.AllowAll, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ipMap, triremeNets, nil)
+	return policy.NewPUPolicy("", policy.AllowAll, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ipMap, triremeNets, nil, nil)
 }
 
 // notInfraContainerPolicy is a policy that should apply to the other containers in a PoD that are not the infra container.

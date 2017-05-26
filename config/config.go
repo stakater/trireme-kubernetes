@@ -3,6 +3,7 @@ package config
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"strings"
@@ -158,7 +159,7 @@ func LoadConfig() *TriKubeConfig {
 		config.KubeNodeName = os.Getenv(EnvNodeName)
 	}
 	if config.KubeNodeName == "" {
-		panic("Couldn't load NodeName. Ensure Kubernetes Nodename is given as a parameter ( -node) if not running in a KubernetesCluster ")
+		log.Fatal("Couldn't load NodeName. Ensure Kubernetes Nodename is given as a parameter ( -node) if not running in a KubernetesCluster ")
 	}
 
 	config.AuthType = *flagAuthType

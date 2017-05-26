@@ -1,4 +1,4 @@
-PROJECT_NAME := trireme-kubernetes
+PROJECT_NAME := kube-test
 BUILD_NUMBER := latest
 DOCKER_REGISTRY?=aporeto
 DOCKER_IMAGE_NAME?=$(PROJECT_NAME)
