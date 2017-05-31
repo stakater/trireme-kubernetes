@@ -75,6 +75,12 @@ const RemoteEnforcer = "REMOTE_ENFORCER"
 // DefaultRemoteEnforcer is the default Kubernetes Remote Enforcer status.
 const DefaultRemoteEnforcer = true
 
+// EnvLogLevel is the env. variable that will contain the value for the log level
+const EnvLogLevel = "LOG_LEVEL"
+
+// DefaultLogLevel is the default log level.
+const DefaultLogLevel = "info"
+
 // TriKubeConfig maintains the Configuration of Kubernetes Integration
 type TriKubeConfig struct {
 	KubeEnv               bool
@@ -111,6 +117,7 @@ func LoadConfig() *TriKubeConfig {
 	var flagKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kubernetes")
 	var flagtSyncExistingContainers = flag.Bool("syncexisting", true, "Sync existing containers")
 	var flagTriremeNets = flag.String("triremenets", "", "Subnets with Trireme endpoints.")
+	var flagLogLEvel = flag.String("loglevel", "", "Log level. Default to info")
 	var flagEnforcer = flag.Bool("enforcer", false, "Use the Trireme Enforcer.")
 	var flagRemoteEnforcer = flag.Bool("remote", true, "Use the Trireme Remote Enforcer.")
 
@@ -119,8 +126,13 @@ func LoadConfig() *TriKubeConfig {
 
 	config := &TriKubeConfig{}
 
-	// TODO: Based on the V Level
-	config.LogLevel = "debug"
+	config.LogLevel = *flagLogLEvel
+	if config.LogLevel == "" {
+		config.LogLevel = os.Getenv(EnvLogLevel)
+	}
+	if config.LogLevel == "" {
+		config.LogLevel = DefaultLogLevel
+	}
 
 	if os.Getenv(EnvTriremeEnforcer) == "" {
 		config.Enforcer = *flagEnforcer

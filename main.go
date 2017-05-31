@@ -27,11 +27,8 @@ func main() {
 	zapConfig := zap.NewDevelopmentConfig()
 	zapConfig.DisableStacktrace = true
 
-	// Set statitcally for now
-	level := "info"
-
 	// Set the logger
-	switch level {
+	switch config.LogLevel {
 	case "trace", "debug":
 		zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	case "info":
