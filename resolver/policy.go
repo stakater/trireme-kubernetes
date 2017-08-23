@@ -174,8 +174,8 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 		glog.V(2).Infof("Pod namespace (%s) is not NetworkPolicyActivated, AllowAll.", kubernetesNamespace)
 		// adding the namespace as an extra label.
 		podLabels["@namespace"] = kubernetesNamespace
-		ips := map[string]string{policy.DefaultNamespace: pod.Status.PodIP}
-		allowAllPuPolicy := allowAllPolicy(policy.NewTagsMap(podLabels), policy.NewIPMap(ips), k.triremeNetworks)
+		ips := policy.ExtendedMap{policy.DefaultNamespace: pod.Status.PodIP}
+		allowAllPuPolicy := allowAllPolicy(policy.NewTagStoreFromMap(podLabels), ips, k.triremeNetworks)
 
 		return allowAllPuPolicy, nil
 	}
@@ -203,9 +203,9 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 	}
 	allNamespaces, _ := k.KubernetesClient.AllNamespaces()
 
-	ips := map[string]string{policy.DefaultNamespace: pod.Status.PodIP}
+	ips := policy.ExtendedMap{policy.DefaultNamespace: pod.Status.PodIP}
 
-	puPolicy, err := generatePUPolicy(podRules, kubernetesNamespace, allNamespaces, policy.NewTagsMap(podLabels), policy.NewIPMap(ips), k.triremeNetworks)
+	puPolicy, err := generatePUPolicy(podRules, kubernetesNamespace, allNamespaces, policy.NewTagStoreFromMap(podLabels), ips, k.triremeNetworks)
 	if err != nil {
 		return nil, err
 	}
@@ -234,8 +234,8 @@ func (k *KubernetesPolicy) updatePodPolicy(pod *api.Pod) error {
 	if err != nil {
 		return fmt.Errorf("Couldn't generate a Pod Policy for pod update %s", err)
 	}
-	returnChan := k.policyUpdater.UpdatePolicy(contextID, containerPolicy)
-	if err := <-returnChan; err != nil {
+	err = k.policyUpdater.UpdatePolicy(contextID, containerPolicy)
+	if err != nil {
 		return fmt.Errorf("Error while updating the policy: %s", err)
 	}
 	return nil

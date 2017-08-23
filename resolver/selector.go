@@ -153,7 +153,9 @@ func podRules(rule *extensions.NetworkPolicyIngressRule, namespace string) ([]po
 		}
 		selector := policy.TagSelector{
 			Clause: completeClause,
-			Action: policy.Accept,
+			Policy: &policy.FlowPolicy{
+				Action: policy.Accept,
+			},
 		}
 		receiverRules = append(receiverRules, selector)
 	}
@@ -198,7 +200,9 @@ func namespaceRules(rule *extensions.NetworkPolicyIngressRule, podNamespace stri
 
 	selector := policy.TagSelector{
 		Clause: []policy.KeyValueOperator{clause},
-		Action: policy.Accept,
+		Policy: &policy.FlowPolicy{
+			Action: policy.Accept,
+		},
 	}
 
 	receiverRules = append(receiverRules, selector)
@@ -226,14 +230,18 @@ func aclRules(rule extensions.NetworkPolicyIngressRule) ([]policy.IPRule, error)
 			Address:  "0.0.0.0/0",
 			Port:     portEntry.Port.String(),
 			Protocol: proto,
-			Action:   policy.Accept,
+			Policy: &policy.FlowPolicy{
+				Action: policy.Accept,
+			},
 		}
 
 		iPruleUDP := policy.IPRule{
 			Address:  "0.0.0.0/0",
 			Port:     portEntry.Port.String(),
 			Protocol: proto,
-			Action:   policy.Accept,
+			Policy: &policy.FlowPolicy{
+				Action: policy.Accept,
+			},
 		}
 		aclPolicy = append(aclPolicy, iPruleTCP, iPruleUDP)
 	}
@@ -247,20 +255,24 @@ func aclAllowAllRules() []policy.IPRule {
 		Address:  "0.0.0.0/0",
 		Port:     "0:65535",
 		Protocol: "TCP",
-		Action:   policy.Accept,
+		Policy: &policy.FlowPolicy{
+			Action: policy.Accept,
+		},
 	}
 	iPruleUDP := policy.IPRule{
 		Address:  "0.0.0.0/0",
 		Port:     "0:65535",
 		Protocol: "UDP",
-		Action:   policy.Accept,
+		Policy: &policy.FlowPolicy{
+			Action: policy.Accept,
+		},
 	}
 	return []policy.IPRule{iPruleTCP, iPruleUDP}
 }
 
 // logRules logs all the rules currently used. Useful for debugging.
 func logRules(containerPolicy *policy.PUPolicy) {
-	for i, selector := range containerPolicy.ReceiverRules().TagSelectors {
+	for i, selector := range containerPolicy.ReceiverRules() {
 		for _, clause := range selector.Clause {
 			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
 		}
@@ -270,7 +282,7 @@ func logRules(containerPolicy *policy.PUPolicy) {
 }
 
 // generatePUPolicy creates a PUPolicy representation
-func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList, tags *policy.TagsMap, ips *policy.IPMap, triremeNets []string) (*policy.PUPolicy, error) {
+func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList, tags *policy.TagStore, ips policy.ExtendedMap, triremeNets []string) (*policy.PUPolicy, error) {
 	receiverRules := []policy.TagSelector{}
 	ipRules := []policy.IPRule{}
 
@@ -311,14 +323,14 @@ func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace
 		receiverRules = append(receiverRules, namespaceSelectorRules...)
 
 	}
-	ingressACLs := policy.NewIPRuleList(ipRules)
+	ingressACLs := ipRules
 
 	// Egress Allow All as per Network Policy definition.
-	egressACLs := policy.NewIPRuleList(aclAllowAllRules())
-	receiverRulesList := policy.NewTagSelectorList(receiverRules)
+	egressACLs := aclAllowAllRules()
+	receiverRulesList := receiverRules
 
 	excluded := []string{}
-	containerPolicy := policy.NewPUPolicy("", policy.Police, egressACLs, ingressACLs, nil, receiverRulesList, tags, tags, ips, triremeNets, excluded, nil)
+	containerPolicy := policy.NewPUPolicy("", policy.Police, egressACLs, ingressACLs, nil, receiverRulesList, tags, tags, ips, triremeNets, excluded)
 
 	logRules(containerPolicy)
 	return containerPolicy, nil
@@ -326,7 +338,7 @@ func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace
 
 // allowAllPolicy returns a simple generic policy used in order to not police the PU.
 // example: The NS is not networkPolicy activated.
-func allowAllPolicy(tags *policy.TagsMap, ipMap *policy.IPMap, triremeNets []string) *policy.PUPolicy {
+func allowAllPolicy(tags *policy.TagStore, ipMap policy.ExtendedMap, triremeNets []string) *policy.PUPolicy {
 	completeClause := []policy.KeyValueOperator{
 		policy.KeyValueOperator{
 			Key:      "@namespace",
@@ -336,14 +348,16 @@ func allowAllPolicy(tags *policy.TagsMap, ipMap *policy.IPMap, triremeNets []str
 	}
 	selector := policy.TagSelector{
 		Clause: completeClause,
-		Action: policy.Accept,
+		Policy: &policy.FlowPolicy{
+			Action: policy.Accept,
+		},
 	}
 	allowAllRules := aclAllowAllRules()
-	receivingRules := policy.NewTagSelectorList([]policy.TagSelector{selector})
-	ingressACLs := policy.NewIPRuleList([]policy.IPRule{allowAllRules[0], allowAllRules[1]})
-	egressACLs := policy.NewIPRuleList([]policy.IPRule{allowAllRules[0], allowAllRules[1]})
+	receivingRules := []policy.TagSelector{selector}
+	ingressACLs := []policy.IPRule{allowAllRules[0], allowAllRules[1]}
+	egressACLs := []policy.IPRule{allowAllRules[0], allowAllRules[1]}
 
-	return policy.NewPUPolicy("", policy.AllowAll, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ipMap, triremeNets, nil, nil)
+	return policy.NewPUPolicy("", policy.AllowAll, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ipMap, triremeNets, nil)
 }
 
 // notInfraContainerPolicy is a policy that should apply to the other containers in a PoD that are not the infra container.
