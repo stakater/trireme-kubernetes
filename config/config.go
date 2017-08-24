@@ -1,100 +1,41 @@
 package config
 
 import (
-	"flag"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"strings"
 
-	"github.com/golang/glog"
+	"github.com/spf13/viper"
+
+	flag "github.com/spf13/pflag"
 )
-
-// EnvTrue is the string for true
-const EnvTrue = "true"
-
-// EnvFalse is the string for false
-const EnvFalse = "false"
-
-// EnvNodeName is the default env. name used for the Kubernetes node name.
-const EnvNodeName = "KUBERNETES_NODE"
-
-// EnvNodeAnnotationKey is the env variable used as a key for the annotation containing the
-// node cert.
-const EnvNodeAnnotationKey = "TRIREME_CERT_ANNOTATION"
-
-// DefaultNodeAnnotationKey is the env variable used as a key for the annotation containing the
-// node cert.
-const DefaultNodeAnnotationKey = "TRIREME"
-
-// EnvAuthType is used as the Auth Type.
-const EnvAuthType = "TRIREME_AUTH_TYPE"
-
-// DefaultAuthType is the env variable used as a key for the annotation containing the
-// node cert.
-const DefaultAuthType = "PSK"
-
-// EnvPKIDirectory is the env. variable name for the location of the directory where
-// the PKI files are expected to be found.
-const EnvPKIDirectory = "TRIREME_PKI_MOUNT"
-
-// DefaultPKIDirectory is the directory where the PEMs are mounted.
-const DefaultPKIDirectory = "/var/trireme/"
-
-// EnvTriremePSK is used as the default PSK for trireme if not overriden by the user.
-const EnvTriremePSK = "TRIREME_PSK"
-
-// DefaultTriremePSK is used as the default PSK for trireme if not overriden by the user.
-const DefaultTriremePSK = "Trireme"
 
 // DefaultKubeConfigLocation is the default location of the KubeConfig file.
 const DefaultKubeConfigLocation = "/.kube/config"
 
-// EnvSyncExistingContainers is the env variable that will define if you sync the existing containers.
-const EnvSyncExistingContainers = "SYNC_EXISTING_CONTAINERS"
+// Configuration contains all the User Parameter for Trireme-Kubernetes.
+type Configuration struct {
+	// AuthType defines if Trireme uses PSK or PKI
+	AuthType string
+	// KubeNodeName is the identifier used for this Trireme instance
+	KubeNodeName string
+	// PKIDirectory is the directory where the Key files are stored (is using PKI)
+	PKIDirectory string
+	// TriremePSK is the PSK used for Trireme (if using PSK)
+	TriremePSK string
+	// RemoteEnforcer defines if the enforcer is spawned into each POD namespace
+	// or into the host default namespace.
+	RemoteEnforcer bool
 
-// DefaultSyncExistingContainers is the default value if you need to sync all existing containers.
-const DefaultSyncExistingContainers = true
+	TriremeNetworks       string
+	ParsedTriremeNetworks []string
 
-// EnvTriremeNets is the env. variable that will contain the value for the Trireme Networks.
-const EnvTriremeNets = "TRIREME_NETS"
+	KubeconfigPath string
+	LogLevel       string
 
-// DefaultTriremeNets is the default Kubernetes Network subnet.
-const DefaultTriremeNets = "10.0.0.0/8"
-
-// EnvTriremeEnforcer is the env. variable that will contain the value for the Trireme Enforcer
-const EnvTriremeEnforcer = "ENFORCER"
-
-// DefaultTriremeEnforcer is the default Kubernetes Enforcer status.
-const DefaultTriremeEnforcer = false
-
-// RemoteEnforcer is the env. variable that will contain the value for the Remote Trireme Enforcer
-const RemoteEnforcer = "REMOTE_ENFORCER"
-
-// DefaultRemoteEnforcer is the default Kubernetes Remote Enforcer status.
-const DefaultRemoteEnforcer = true
-
-// EnvLogLevel is the env. variable that will contain the value for the log level
-const EnvLogLevel = "LOG_LEVEL"
-
-// DefaultLogLevel is the default log level.
-const DefaultLogLevel = "info"
-
-// TriKubeConfig maintains the Configuration of Kubernetes Integration
-type TriKubeConfig struct {
-	KubeEnv               bool
-	AuthType              string
-	KubeNodeName          string
-	NodeAnnotationKey     string
-	PKIDirectory          string
-	KubeConfigLocation    string
-	TriremePSK            string
-	TriremeNets           []string
-	ExistingContainerSync bool
-	Enforcer              bool
-	RemoteEnforcer        bool
-	LogLevel              string
+	// Enforce defines if this process is an enforcer process (spawned into POD namespaces)
+	Enforce bool
 }
 
 func usage() {
@@ -103,157 +44,99 @@ func usage() {
 	os.Exit(2)
 }
 
-// LoadConfig loads config:
+// LoadConfig loads a Configuration struct:
 // 1) If presents flags are used
 // 2) If no flags, Env Variables are used
 // 3) If no Env Variables, defaults are used when possible.
-func LoadConfig() *TriKubeConfig {
-
-	var flagNodeName = flag.String("node", "", "Node name in Kubernetes")
-	var flagNodeAnnotationKey = flag.String("annotation", "", "Trireme Node Annotation key in Kubernetes")
-	var flagAuthType = flag.String("auth", "", "Authentication type: PKI/PSK")
-	var flagPKIDirectory = flag.String("pki", "", "Directory where the Trireme PKIs are")
-	var flagPSK = flag.String("psk", "", "PSK to use")
-	var flagKubeConfigLocation = flag.String("kubeconfig", "", "KubeConfig used to connect to Kubernetes")
-	var flagtSyncExistingContainers = flag.Bool("syncexisting", true, "Sync existing containers")
-	var flagTriremeNets = flag.String("triremenets", "", "Subnets with Trireme endpoints.")
-	var flagLogLEvel = flag.String("loglevel", "", "Log level. Default to info")
-	var flagEnforcer = flag.Bool("enforcer", false, "Use the Trireme Enforcer.")
-	var flagRemoteEnforcer = flag.Bool("remote", true, "Use the Trireme Remote Enforcer.")
-
+func LoadConfig() (*Configuration, error) {
 	flag.Usage = usage
+	flag.String("AuthType", "", "Authentication type: PKI/PSK")
+	flag.String("KubeNodeName", "", "Node name in Kubernetes")
+	flag.String("PKIDirectory", "", "Directory where the Trireme PKIs are")
+	flag.String("TriremePSK", "", "PSK to use")
+	flag.Bool("RemoteEnforcer", true, "Use the Trireme Remote Enforcer.")
+	flag.String("TriremeNetworks", "", "TriremeNetworks")
+	flag.String("KubeconfigPath", "", "KubeConfig used to connect to Kubernetes")
+	flag.String("LogLevel", "", "Log level. Default to info (trace//debug//info//warn//error//fatal)")
+	flag.Bool("Enforce", false, "Run Trireme-Kubernetes in Enforce mode.")
+
+	// Setting up default configuration
+	viper.SetDefault("AuthType", "PSK")
+	viper.SetDefault("KubeNodeName", "")
+	viper.SetDefault("PKIDirectory", "")
+	viper.SetDefault("TriremePSK", "PSK")
+	viper.SetDefault("RemoteEnforcer", true)
+	viper.SetDefault("TriremeNetworks", "")
+	viper.SetDefault("KubeconfigPath", "")
+	viper.SetDefault("LogLevel", "info")
+	viper.SetDefault("Enforce", false)
+
+	// Binding ENV variables
+	// Each config will be of format TRIREME_XYZ as env variable, where XYZ
+	// is the upper case config.
+	viper.SetEnvPrefix("TRIREME")
+	viper.AutomaticEnv()
+
+	// Binding CLI flags.
 	flag.Parse()
+	viper.BindPFlags(flag.CommandLine)
 
-	config := &TriKubeConfig{}
+	var config Configuration
 
-	config.LogLevel = *flagLogLEvel
-	if config.LogLevel == "" {
-		config.LogLevel = os.Getenv(EnvLogLevel)
-	}
-	if config.LogLevel == "" {
-		config.LogLevel = DefaultLogLevel
-	}
-
-	if os.Getenv(EnvTriremeEnforcer) == "" {
-		config.Enforcer = *flagEnforcer
-	}
-	if os.Getenv(EnvTriremeEnforcer) == EnvTrue {
-		config.Enforcer = true
-	}
-	if os.Getenv(EnvTriremeEnforcer) == EnvFalse {
-		config.Enforcer = false
-	}
-
-	// TODO: Remove once we move to DocOps
-	if len(os.Args) >= 2 {
-		if os.Args[1] == "enforce" {
-			config.Enforcer = true
-		}
-	}
-
-	if config.Enforcer {
-		return config
-	}
-
-	if os.Getenv("KUBERNETES_PORT") == "" {
-		config.KubeEnv = false
-		config.KubeConfigLocation = *flagKubeConfigLocation
-		if config.KubeConfigLocation == "" {
-			config.KubeConfigLocation = os.Getenv("HOME") + DefaultKubeConfigLocation
-		}
-	} else {
-		config.KubeEnv = true
-		config.KubeConfigLocation = ""
-	}
-
-	config.KubeNodeName = *flagNodeName
-	if config.KubeNodeName == "" {
-		config.KubeNodeName = os.Getenv(EnvNodeName)
-	}
-	if config.KubeNodeName == "" {
-		log.Fatal("Couldn't load NodeName. Ensure Kubernetes Nodename is given as a parameter ( -node) if not running in a KubernetesCluster ")
-	}
-
-	config.AuthType = *flagAuthType
-	if config.AuthType == "" {
-		config.AuthType = os.Getenv(EnvNodeAnnotationKey)
-	}
-	if config.AuthType == "" {
-		config.AuthType = DefaultAuthType
-	}
-	if config.AuthType != "PSK" && config.AuthType != "PKI" {
-		config.AuthType = DefaultAuthType
-	}
-
-	// If PSK,load the PSK.
-	if config.AuthType == "PSK" {
-		config.TriremePSK = *flagPSK
-		if config.TriremePSK == "" {
-			config.TriremePSK = os.Getenv(EnvTriremePSK)
-		}
-		if config.TriremePSK == "" {
-			config.TriremePSK = DefaultTriremePSK
-		}
-	}
-
-	// Is PKI, Load the Certs and The annotation key.
-	if config.AuthType == "PKI" {
-		config.PKIDirectory = *flagPKIDirectory
-		if config.PKIDirectory == "" {
-			config.PKIDirectory = os.Getenv(EnvPKIDirectory)
-		}
-		if config.PKIDirectory == "" {
-			config.PKIDirectory = DefaultPKIDirectory
-		}
-
-		config.NodeAnnotationKey = *flagNodeAnnotationKey
-		if config.NodeAnnotationKey == "" {
-			config.NodeAnnotationKey = os.Getenv(EnvNodeAnnotationKey)
-		}
-		if config.NodeAnnotationKey == "" {
-			config.NodeAnnotationKey = DefaultNodeAnnotationKey
-		}
-	}
-
-	if os.Getenv(EnvSyncExistingContainers) == "" {
-		config.ExistingContainerSync = *flagtSyncExistingContainers
-	}
-	if os.Getenv(EnvSyncExistingContainers) == EnvTrue {
-		config.ExistingContainerSync = true
-	}
-	if os.Getenv(EnvSyncExistingContainers) == EnvFalse {
-		config.ExistingContainerSync = false
-	}
-
-	if os.Getenv(RemoteEnforcer) == "" {
-		config.RemoteEnforcer = *flagRemoteEnforcer
-	}
-	if os.Getenv(RemoteEnforcer) == EnvTrue {
-		config.RemoteEnforcer = true
-	}
-	if os.Getenv(RemoteEnforcer) == EnvFalse {
-		config.RemoteEnforcer = false
-	}
-
-	triremeNets := *flagTriremeNets
-	if triremeNets == "" {
-		triremeNets = os.Getenv(EnvTriremeNets)
-	}
-	if triremeNets == "" {
-		triremeNets = DefaultTriremeNets
-	}
-	parseResult, err := parseTriremeNets(triremeNets)
+	err := viper.Unmarshal(&config)
 	if err != nil {
-		glog.Fatalf("Error parsing TriremeNets: %s", err)
+		return nil, fmt.Errorf("Error unmarshalling:%s", err)
 	}
-	config.TriremeNets = parseResult
-	return config
+
+	err = validateConfig(&config)
+	if err != nil {
+		return nil, err
+	}
+
+	return &config, nil
 }
 
+// validateConfig is validating the Configuration struct.
+func validateConfig(config *Configuration) error {
+	// Validating KUBECONFIG
+	// In case not running as InCluster, we try to infer a possible KubeConfig location
+	if os.Getenv("KUBERNETES_PORT") == "" {
+		if config.KubeconfigPath == "" {
+			config.KubeconfigPath = os.Getenv("HOME") + DefaultKubeConfigLocation
+		}
+	} else {
+		config.KubeconfigPath = ""
+	}
+
+	// Validating KUBE NODENAME
+	if config.KubeNodeName == "" {
+		return fmt.Errorf("Couldn't load NodeName. Ensure Kubernetes Nodename is given as a parameter")
+	}
+
+	// Validating AUTHTYPE
+	if config.AuthType != "PSK" && config.AuthType != "PKI" {
+		return fmt.Errorf("AuthType should be PSK or PKI")
+	}
+
+	// Validating PSK
+	if config.AuthType == "PSK" && config.TriremePSK == "" {
+		return fmt.Errorf("PSK should be provided")
+	}
+
+	parsedTriremeNetworks, err := parseTriremeNets(config.TriremeNetworks)
+	if err != nil {
+		return fmt.Errorf("TargetNetwork is invalid: %s", err)
+	}
+	config.ParsedTriremeNetworks = parsedTriremeNetworks
+
+	return nil
+}
+
+// parseTriremeNets
 func parseTriremeNets(nets string) ([]string, error) {
 	resultNets := strings.Fields(nets)
 
-	// Validation of parameter networks.
+	// Validation of each networks.
 	for _, network := range resultNets {
 		_, _, err := net.ParseCIDR(network)
 		if err != nil {

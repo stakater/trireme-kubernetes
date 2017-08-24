@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"os/signal"
 
@@ -22,35 +23,17 @@ import (
 )
 
 func main() {
-	config := config.LoadConfig()
-
-	zapConfig := zap.NewDevelopmentConfig()
-	zapConfig.DisableStacktrace = true
-
-	// Set the logger
-	switch config.LogLevel {
-	case "trace", "debug":
-		zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
-	case "info":
-		zapConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
-	case "warn":
-		zapConfig.Level = zap.NewAtomicLevelAt(zap.WarnLevel)
-	case "error":
-		zapConfig.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
-	case "fatal":
-		zapConfig.Level = zap.NewAtomicLevelAt(zap.FatalLevel)
-	default:
-		zapConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
-	}
-
-	logger, err := zapConfig.Build()
+	config, err := config.LoadConfig()
 	if err != nil {
-		panic(err)
+		log.Fatalf("Error loading config: %s", err)
 	}
 
-	zap.ReplaceGlobals(logger)
+	err = setLogs(config.LogLevel)
+	if err != nil {
+		log.Fatalf("Error setting up logs: %s", err)
+	}
 
-	if config.Enforcer {
+	if config.Enforce {
 		fmt.Println("Launching enforcer:")
 
 		glog.V(2).Infof("Launching enforcer: %+v ", config)
@@ -61,7 +44,7 @@ func main() {
 	glog.V(2).Infof("Config used: %+v ", config)
 
 	// Create New PolicyEngine for Kubernetes
-	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeConfigLocation, config.KubeNodeName, config.TriremeNets)
+	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeconfigPath, config.KubeNodeName, config.ParsedTriremeNetworks)
 	if err != nil {
 		fmt.Printf("Error initializing KubernetesPolicy, exiting: %s \n", err)
 		return
@@ -82,11 +65,11 @@ func main() {
 
 		// Starting PSK Trireme
 		trireme, monitor, _ = configurator.NewPSKHybridTriremeWithMonitor(config.KubeNodeName,
-			config.TriremeNets,
+			config.ParsedTriremeNetworks,
 			kubernetesPolicy,
 			nil,
 			nil,
-			config.ExistingContainerSync,
+			true,
 			[]byte(config.TriremePSK),
 			nil,
 			false)
@@ -103,14 +86,24 @@ func main() {
 		}
 
 		// Starting PKI Trireme
-		trireme, monitor, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName, kubernetesPolicy, nil, nil, config.ExistingContainerSync, pki.KeyPEM, pki.CertPEM, pki.CaCertPEM, nil, config.RemoteEnforcer, false)
+		trireme, monitor, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName,
+			kubernetesPolicy,
+			nil,
+			nil,
+			true,
+			pki.KeyPEM,
+			pki.CertPEM,
+			pki.CaCertPEM,
+			nil,
+			config.RemoteEnforcer,
+			false)
 
 		// Sync the Trireme certs over all the Kubernetes Cluster. Annotations on the
 		// node object are used to hold those certs.
 		// 1) Adds the localCert on the localNode annotation
 		// 2) Sync All the Certs from the other nodes to the CertCache (interface)
 		// 3) Waits and listen for new nodes coming up.
-		certs := auth.NewCertsWatcher(*kubernetesPolicy.KubernetesClient, publicKeyAdder, config.NodeAnnotationKey)
+		certs := auth.NewCertsWatcher(*kubernetesPolicy.KubernetesClient, publicKeyAdder, "abcd")
 		certs.AddCertToNodeAnnotation(*kubernetesPolicy.KubernetesClient, pki.CertPEM)
 		certs.SyncNodeCerts(*kubernetesPolicy.KubernetesClient)
 		go certs.StartWatchingCerts()
@@ -136,4 +129,34 @@ func main() {
 	monitor.Stop()
 	trireme.Stop()
 
+}
+
+// setLogs setups Zap to
+func setLogs(logLevel string) error {
+	zapConfig := zap.NewDevelopmentConfig()
+	zapConfig.DisableStacktrace = true
+
+	// Set the logger
+	switch logLevel {
+	case "trace", "debug":
+		zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	case "info":
+		zapConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	case "warn":
+		zapConfig.Level = zap.NewAtomicLevelAt(zap.WarnLevel)
+	case "error":
+		zapConfig.Level = zap.NewAtomicLevelAt(zap.ErrorLevel)
+	case "fatal":
+		zapConfig.Level = zap.NewAtomicLevelAt(zap.FatalLevel)
+	default:
+		zapConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
+	}
+
+	logger, err := zapConfig.Build()
+	if err != nil {
+		return err
+	}
+
+	zap.ReplaceGlobals(logger)
+	return nil
 }
