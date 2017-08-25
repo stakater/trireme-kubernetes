@@ -9,6 +9,7 @@ import (
 	"github.com/aporeto-inc/trireme-kubernetes/auth"
 	"github.com/aporeto-inc/trireme-kubernetes/config"
 	"github.com/aporeto-inc/trireme-kubernetes/resolver"
+	"github.com/aporeto-inc/trireme-kubernetes/version"
 
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme/cmd/remoteenforcer"
@@ -22,7 +23,27 @@ import (
 	"go.uber.org/zap"
 )
 
+func banner(version, revision string) {
+	fmt.Printf(`
+
+
+	  _____     _
+	 |_   _| __(_)_ __ ___ _ __ ___   ___
+	   | || '__| | '__/ _ \ '_'' _ \ / _ \
+	   | || |  | | | |  __/ | | | | |  __/
+	   |_||_|  |_|_|  \___|_| |_| |_|\___|
+
+
+_______________________________________________________________
+             %s - %s
+                                                 🚀  by Aporeto
+
+`, version, revision)
+}
+
 func main() {
+	banner(version.VERSION, version.REVISION)
+
 	config, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading config: %s", err)
