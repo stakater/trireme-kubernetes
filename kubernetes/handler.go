@@ -1,15 +1,14 @@
 package kubernetes
 
 import (
-	"github.com/golang/glog"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	api "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	"k8s.io/client-go/tools/cache"
-)
 
-const errorLogLevel = 2
+	"go.uber.org/zap"
+)
 
 // CreateResourceController creates a controller for a specific ressource and namespace.
 // The parameter function will be called on Add/Delete/Update events
@@ -34,18 +33,18 @@ func (c *Client) CreateNamespaceController(
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "namespaces", "", &api.Namespace{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Namespace)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Add NameSpace: %s ", err)
+				zap.L().Error("Error while handling Add NameSpace", zap.Error(err))
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*api.Namespace)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Delete NameSpace: %s ", err)
+				zap.L().Error("Error while handling Delete NameSpace", zap.Error(err))
 
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*api.Namespace), updatedApiStruct.(*api.Namespace)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Update NameSpace: %s ", err)
+				zap.L().Error("Error while handling Update NameSpace", zap.Error(err))
 
 			}
 		})
@@ -58,17 +57,17 @@ func (c *Client) CreateLocalPodController(namespace string,
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "pods", namespace, &api.Pod{}, c.localNodeSelector(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Pod)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Add Pod: %s ", err)
+				zap.L().Error("Error while handling Add Pod", zap.Error(err))
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*api.Pod)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Delete Pod: %s ", err)
+				zap.L().Error("Error while handling Delete Pod", zap.Error(err))
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*api.Pod), updatedApiStruct.(*api.Pod)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Update Pod: %s ", err)
+				zap.L().Error("Error while handling Update Pod", zap.Error(err))
 			}
 		})
 }
@@ -79,17 +78,17 @@ func (c *Client) CreateNetworkPoliciesController(namespace string,
 	return CreateResourceController(c.KubeClient().Extensions().RESTClient(), "networkpolicies", namespace, &extensions.NetworkPolicy{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*extensions.NetworkPolicy)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Add NetworkPolicy: %s ", err)
+				zap.L().Error("Error while handling Add NetworkPolicy", zap.Error(err))
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*extensions.NetworkPolicy)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Delete NetworkPolicy: %s ", err)
+				zap.L().Error("Error while handling Delete NetworkPolicy", zap.Error(err))
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*extensions.NetworkPolicy), updatedApiStruct.(*extensions.NetworkPolicy)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Update NetworkPolicy: %s ", err)
+				zap.L().Error("Error while handling Update NetworkPolicy", zap.Error(err))
 			}
 		})
 }
@@ -100,17 +99,17 @@ func (c *Client) CreateNodeController(
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "nodes", "", &api.Node{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Node)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Add Node: %s ", err)
+				zap.L().Error("Error while handling Add Node", zap.Error(err))
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*api.Node)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Delete Node: %s ", err)
+				zap.L().Error("Error while handling Delete Node", zap.Error(err))
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*api.Node), updatedApiStruct.(*api.Node)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Update Node: %s ", err)
+				zap.L().Error("Error while handling Update Node", zap.Error(err))
 			}
 		})
 }
@@ -121,17 +120,17 @@ func (c *Client) CreateServiceController(namespace string,
 	return CreateResourceController(c.KubeClient().Core().RESTClient(), "services", "", &api.Service{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
 			if err := addFunc(addedApiStruct.(*api.Service)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Add service: %s ", err)
+				zap.L().Error("Error while handling Add service", zap.Error(err))
 			}
 		},
 		func(deletedApiStruct interface{}) {
 			if err := deleteFunc(deletedApiStruct.(*api.Service)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Delete service: %s ", err)
+				zap.L().Error("Error while handling Delete service", zap.Error(err))
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
 			if err := updateFunc(oldApiStruct.(*api.Service), updatedApiStruct.(*api.Service)); err != nil {
-				glog.V(errorLogLevel).Infof("Error while handling Update service: %s ", err)
+				zap.L().Error("Error while handling Update service", zap.Error(err))
 			}
 		})
 }

@@ -3,14 +3,15 @@ package resolver
 import (
 	"fmt"
 
+	"go.uber.org/zap"
+
+	"github.com/aporeto-inc/trireme/policy"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	api "k8s.io/client-go/pkg/api/v1"
 	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
-
-	"github.com/aporeto-inc/trireme/policy"
-	"github.com/golang/glog"
 )
 
 func clauseEquals(requirement labels.Requirement) []policy.KeyValueOperator {
@@ -274,10 +275,10 @@ func aclAllowAllRules() []policy.IPRule {
 func logRules(containerPolicy *policy.PUPolicy) {
 	for i, selector := range containerPolicy.ReceiverRules() {
 		for _, clause := range selector.Clause {
-			glog.V(5).Infof("Trireme policy for container X : Selector %d : %+v ", i, clause)
+			zap.L().Info("Trireme policy for container X", zap.Int("i", i), zap.Any("selector", clause))
 		}
 	}
-	glog.V(5).Infof("Trireme tags for container X : %+v ", containerPolicy.Identity())
+	zap.L().Info("Trireme tags for container X", zap.Any("identity", containerPolicy.Identity()))
 
 }
 

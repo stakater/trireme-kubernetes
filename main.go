@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"syscall"
 
 	"github.com/aporeto-inc/trireme-kubernetes/auth"
 	"github.com/aporeto-inc/trireme-kubernetes/config"
@@ -17,8 +18,6 @@ import (
 	"github.com/aporeto-inc/trireme/enforcer"
 	"github.com/aporeto-inc/trireme/enforcer/utils/tokens"
 	"github.com/aporeto-inc/trireme/monitor"
-
-	"github.com/golang/glog"
 
 	"go.uber.org/zap"
 )
@@ -54,21 +53,19 @@ func main() {
 		log.Fatalf("Error setting up logs: %s", err)
 	}
 
-	if config.Enforce {
-		fmt.Println("Launching enforcer:")
+	zap.L().Debug("Config used", zap.Any("Config", config))
 
-		glog.V(2).Infof("Launching enforcer: %+v ", config)
+	if config.Enforce {
+		zap.L().Info("Launching in enforcer mode")
+
 		remoteenforcer.LaunchRemoteEnforcer(nil)
 		return
 	}
 
-	glog.V(2).Infof("Config used: %+v ", config)
-
-	// Create New PolicyEngine for Kubernetes
+	// Create New PolicyEngine based on Kubernetes rules.
 	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeconfigPath, config.KubeNodeName, config.ParsedTriremeNetworks)
 	if err != nil {
-		fmt.Printf("Error initializing KubernetesPolicy, exiting: %s \n", err)
-		return
+		zap.L().Fatal("Error initializing KubernetesPolicy: ", zap.Error(err))
 	}
 
 	var trireme trireme.Trireme
@@ -82,7 +79,7 @@ func main() {
 	}
 
 	if config.AuthType == "PSK" {
-		glog.V(2).Infof("Starting Trireme PSK")
+		zap.L().Info("Initializing Trireme with PSK Auth")
 
 		// Starting PSK Trireme
 		trireme, monitor, _ = configurator.NewPSKHybridTriremeWithMonitor(config.KubeNodeName,
@@ -97,13 +94,12 @@ func main() {
 	}
 
 	if config.AuthType == "PKI" {
-		glog.V(2).Infof("Starting Trireme PKI")
+		zap.L().Info("Initializing Trireme with PKI Auth")
 
 		// Load the PKI Certs/Keys based on config.
 		pki, err := auth.LoadPKI(config.PKIDirectory)
 		if err != nil {
-			fmt.Printf("Error loading Certificates for PKI Trireme, exiting: %s \n", err)
-			return
+			zap.L().Fatal("Error loading Certificates for PKI Trireme", zap.Error(err))
 		}
 
 		// Starting PKI Trireme
@@ -136,19 +132,25 @@ func main() {
 
 	// Start all the go routines.
 	trireme.Start()
+	zap.L().Debug("Trireme started")
 	monitor.Start()
+	zap.L().Debug("Monitor started")
 	kubernetesPolicy.Run()
+	zap.L().Debug("PolicyResolver started")
 
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
+	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	zap.L().Debug("Everything started. Waiting for Stop signal")
 	// Waiting for a Sig
 	<-c
 
-	fmt.Println("Bye Kubernetes!")
+	zap.L().Debug("Stop signal received")
 	kubernetesPolicy.Stop()
+	zap.L().Debug("KubernetesPolicy stopped")
 	monitor.Stop()
+	zap.L().Debug("Monitor stopped")
 	trireme.Stop()
+	zap.L().Debug("Trireme stopped")
 
 }
 
