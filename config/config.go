@@ -35,11 +35,10 @@ type Configuration struct {
 	LogLevel       string
 
 	// Enforce defines if this process is an enforcer process (spawned into POD namespaces)
-	Enforce bool
+	Enforce bool `mapstructure:"Enforce"`
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "usage: example -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n")
 	flag.PrintDefaults()
 	os.Exit(2)
 }
@@ -83,6 +82,14 @@ func LoadConfig() (*Configuration, error) {
 
 	var config Configuration
 
+	// Manual check for Enforce mode as this is given as a simple argument
+	if len(os.Args) > 1 {
+		if os.Args[1] == "enforce" {
+			config.Enforce = true
+			return &config, nil
+		}
+	}
+
 	err := viper.Unmarshal(&config)
 	if err != nil {
 		return nil, fmt.Errorf("Error unmarshalling:%s", err)
@@ -109,7 +116,7 @@ func validateConfig(config *Configuration) error {
 	}
 
 	// Validating KUBE NODENAME
-	if config.KubeNodeName == "" {
+	if !config.Enforce && config.KubeNodeName == "" {
 		return fmt.Errorf("Couldn't load NodeName. Ensure Kubernetes Nodename is given as a parameter")
 	}
 

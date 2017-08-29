@@ -9,7 +9,7 @@ import (
 	"github.com/aporeto-inc/trireme-kubernetes/kubernetes"
 	"github.com/aporeto-inc/trireme/enforcer"
 
-	"github.com/golang/glog"
+	"go.uber.org/zap"
 )
 
 // Certs is used to monitor the Certificate used all over the Kubernetes Cluster.
@@ -90,6 +90,6 @@ func (c *Certs) SyncNodeCerts(client kubernetes.Client) error {
 }
 
 func (c *Certs) addCertToCache(nodeName string, cert []byte) {
-	glog.V(2).Infof("Adding cert for node: %s", nodeName)
+	zap.L().Info("Adding certificate", zap.String("node", nodeName))
 	c.publicKeyAdder.PublicKeyAdd(nodeName, cert)
 }

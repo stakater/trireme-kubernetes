@@ -103,7 +103,6 @@ func (k *KubernetesPolicy) ResolvePolicy(contextID string, runtimeGetter policy.
 
 	// Only the Infra Container should be policed. All the others should be AllowAll.
 	// The Infra container can be found by checking env. variable.
-
 	tagContent, ok := runtimeGetter.Tag(KubernetesContainerName)
 	if !ok || tagContent != KubernetesInfraContainerName {
 		// return AllowAll
@@ -133,6 +132,7 @@ func (k *KubernetesPolicy) HandlePUEvent(contextID string, eventType monitor.Eve
 // resolvePodPolicy generates the Trireme Policy for a specific Kube Pod and Namespace.
 func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesNamespace string) (*policy.PUPolicy, error) {
 	// Query Kube API to get the Pod's label and IP.
+	zap.L().Info("Resolving policy for POD", zap.String("name", kubernetesPod), zap.String("namespace", kubernetesNamespace))
 	pod, err := k.KubernetesClient.Pod(kubernetesPod, kubernetesNamespace)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get labels for pod %s : %v", kubernetesPod, err)
@@ -230,11 +230,12 @@ func (k *KubernetesPolicy) activateNamespace(namespace *api.Namespace) error {
 	zap.L().Info("Activating namespace for NetworkPolicies", zap.String("namespace", namespace.GetName()))
 
 	podControllerStop := make(chan struct{})
-	podStore, podController := k.KubernetesClient.CreateLocalPodController(namespace.Name,
+	podStore, podController := k.KubernetesClient.CreateLocalPodController(namespace.GetName(),
 		k.addPod,
 		k.deletePod,
 		k.updatePod)
 	go podController.Run(podControllerStop)
+	zap.L().Debug("Pod Controller created", zap.String("namespace", namespace.GetName()))
 
 	npControllerStop := make(chan struct{})
 	npStore, npController := k.KubernetesClient.CreateNetworkPoliciesController(namespace.Name,
@@ -242,9 +243,11 @@ func (k *KubernetesPolicy) activateNamespace(namespace *api.Namespace) error {
 		k.deleteNetworkPolicy,
 		k.updateNetworkPolicy)
 	go npController.Run(npControllerStop)
+	zap.L().Debug("NetworkPolicy controller created", zap.String("namespace", namespace.GetName()))
 
 	namespaceWatcher := NewNamespaceWatcher(namespace.Name, podStore, podController, podControllerStop, npStore, npController, npControllerStop)
-	k.cache.activateNamespaceWatcher(namespace.Name, namespaceWatcher)
+	k.cache.activateNamespaceWatcher(namespace.GetName(), namespaceWatcher)
+	zap.L().Debug("Finished namespace activation", zap.String("namespace", namespace.GetName()))
 
 	return nil
 }
@@ -286,7 +289,7 @@ func (k *KubernetesPolicy) addNamespace(addedNS *api.Namespace) error {
 		zap.L().Info("Namespace Added. doesn't have NetworkPolicies support. Not activating", zap.String("namespace", addedNS.GetName()))
 		return nil
 	}
-	zap.L().Info("Namespace %s Added. Activating", zap.String("namespace", addedNS.GetName()))
+	zap.L().Info("Namespace Added. Activating", zap.String("namespace", addedNS.GetName()))
 	return k.activateNamespace(addedNS)
 }
 
@@ -317,6 +320,8 @@ func (k *KubernetesPolicy) updateNamespace(oldNS, updatedNS *api.Namespace) erro
 }
 
 func (k *KubernetesPolicy) addPod(addedPod *api.Pod) error {
+	zap.L().Debug("New K8S pod added detected", zap.String("name", addedPod.GetName()), zap.String("namespace", addedPod.GetNamespace()))
+
 	err := k.updatePodPolicy(addedPod)
 	if err != nil {
 		return fmt.Errorf("Failed UpdatePolicy on NewPodEvent: %s", err)
@@ -326,6 +331,7 @@ func (k *KubernetesPolicy) addPod(addedPod *api.Pod) error {
 
 func (k *KubernetesPolicy) deletePod(deletedPod *api.Pod) error {
 	zap.L().Debug("New K8S pod Deleted detected", zap.String("name", deletedPod.GetName()), zap.String("namespace", deletedPod.GetNamespace()))
+
 	err := k.cache.deleteFromCacheByPodName(deletedPod.GetName(), deletedPod.GetNamespace())
 	if err != nil {
 		return fmt.Errorf("Error for PodDelete: %s ", err)

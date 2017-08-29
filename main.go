@@ -41,11 +41,14 @@ _______________________________________________________________
 }
 
 func main() {
-	banner(version.VERSION, version.REVISION)
 
 	config, err := config.LoadConfig()
 	if err != nil {
 		log.Fatalf("Error loading config: %s", err)
+	}
+
+	if !config.Enforce {
+		banner(version.VERSION, version.REVISION)
 	}
 
 	err = setLogs(config.LogLevel)
@@ -140,7 +143,7 @@ func main() {
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
-	zap.L().Debug("Everything started. Waiting for Stop signal")
+	zap.L().Info("Everything started. Waiting for Stop signal")
 	// Waiting for a Sig
 	<-c
 
@@ -152,6 +155,7 @@ func main() {
 	trireme.Stop()
 	zap.L().Debug("Trireme stopped")
 
+	zap.L().Info("Everything stopped. Bye Kubernetes!")
 }
 
 // setLogs setups Zap to
