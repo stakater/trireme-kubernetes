@@ -19,10 +19,10 @@ codegen:
 build: codegen
 	CGO_ENABLED=1 go build -a -installsuffix cgo
 
-package:
+package: build
 	mv trireme-kubernetes docker/trireme-kubernetes
 
-docker_build: build package
+docker_build: package
 	docker \
 		build \
 		-t $(DOCKER_REGISTRY)/$(DOCKER_IMAGE_NAME):$(DOCKER_IMAGE_TAG) docker
