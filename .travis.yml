@@ -1,0 +1,46 @@
+language: go
+sudo: required
+dist: trusty
+
+services:
+  - docker
+
+go:
+ - 1.8.1
+
+addons:
+   apt:
+     packages:
+       - libnetfilter-queue-dev
+       - libnetfilter-log-dev
+       - iptables
+       - ipset
+
+env:
+  global:
+    - TOOLS_CMD=golang.org/x/tools/cmd
+    - PATH=$GOROOT/bin:$PATH
+    - SUDO_PERMITTED=1
+
+before_install:
+  - go get -u gopkg.in/alecthomas/gometalinter.v1
+  - go get -v github.com/Masterminds/glide
+  - gometalinter.v1 --install
+  - make codegen
+
+install:
+  - mkdir -p $GOPATH/src/github.com/docker && cd $GOPATH/src/github.com/docker && git clone https://github.com/docker/docker -b 1.13.x docker && cd -
+  - glide up
+
+
+script:
+  - make build
+
+after_success:
+  - docker login -u="$DOCKER_USERNAME" -p="$DOCKER_PASSWORD"
+  - if [ "$TRAVIS_BRANCH" == "master" ]; then
+      make docker_push;
+    else
+      make docker_push -e DOCKER_IMAGE_TAG="pr${TRAVIS_PULL_REQUEST}";
+    fi
+  - bash <(curl -s https://codecov.io/bash)
