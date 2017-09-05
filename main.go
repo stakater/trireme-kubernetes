@@ -49,6 +49,8 @@ func main() {
 
 	if !config.Enforce {
 		banner(version.VERSION, version.REVISION)
+	} else {
+		config.LogLevel = "debug"
 	}
 
 	err = setLogs(config.LogLevel)
@@ -60,13 +62,12 @@ func main() {
 
 	if config.Enforce {
 		zap.L().Info("Launching in enforcer mode")
-
 		remoteenforcer.LaunchRemoteEnforcer(nil)
 		return
 	}
 
 	// Create New PolicyEngine based on Kubernetes rules.
-	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeconfigPath, config.KubeNodeName, config.ParsedTriremeNetworks)
+	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeconfigPath, config.KubeNodeName, config.ParsedTriremeNetworks, config.BetaNetPolicies)
 	if err != nil {
 		zap.L().Fatal("Error initializing KubernetesPolicy: ", zap.Error(err))
 	}
@@ -91,7 +92,7 @@ func main() {
 			nil,
 			nil,
 			true,
-			[]byte(config.TriremePSK),
+			[]byte(config.PSK),
 			nil,
 			false)
 	}

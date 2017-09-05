@@ -22,11 +22,14 @@ type Configuration struct {
 	KubeNodeName string
 	// PKIDirectory is the directory where the Key files are stored (is using PKI)
 	PKIDirectory string
-	// TriremePSK is the PSK used for Trireme (if using PSK)
-	TriremePSK string
+	// PSK is the PSK used for Trireme (if using PSK)
+	PSK string
 	// RemoteEnforcer defines if the enforcer is spawned into each POD namespace
 	// or into the host default namespace.
 	RemoteEnforcer bool
+	// BetaNetPolicies defines if Trireme Kubernetes should follow the beta model
+	// or the GA model for Network Policies. Default is GA
+	BetaNetPolicies bool
 
 	TriremeNetworks       string
 	ParsedTriremeNetworks []string
@@ -52,8 +55,9 @@ func LoadConfig() (*Configuration, error) {
 	flag.String("AuthType", "", "Authentication type: PKI/PSK")
 	flag.String("KubeNodeName", "", "Node name in Kubernetes")
 	flag.String("PKIDirectory", "", "Directory where the Trireme PKIs are")
-	flag.String("TriremePSK", "", "PSK to use")
+	flag.String("PSK", "", "PSK to use")
 	flag.Bool("RemoteEnforcer", true, "Use the Trireme Remote Enforcer.")
+	flag.Bool("BetaNetPolicies", false, "Use old deprecated Beta Network policy model (default: use GA).")
 	flag.String("TriremeNetworks", "", "TriremeNetworks")
 	flag.String("KubeconfigPath", "", "KubeConfig used to connect to Kubernetes")
 	flag.String("LogLevel", "", "Log level. Default to info (trace//debug//info//warn//error//fatal)")
@@ -63,8 +67,9 @@ func LoadConfig() (*Configuration, error) {
 	viper.SetDefault("AuthType", "PSK")
 	viper.SetDefault("KubeNodeName", "")
 	viper.SetDefault("PKIDirectory", "")
-	viper.SetDefault("TriremePSK", "PSK")
+	viper.SetDefault("PSK", "PSK")
 	viper.SetDefault("RemoteEnforcer", true)
+	viper.SetDefault("BetaNetPolicies", false)
 	viper.SetDefault("TriremeNetworks", "")
 	viper.SetDefault("KubeconfigPath", "")
 	viper.SetDefault("LogLevel", "info")
@@ -126,7 +131,7 @@ func validateConfig(config *Configuration) error {
 	}
 
 	// Validating PSK
-	if config.AuthType == "PSK" && config.TriremePSK == "" {
+	if config.AuthType == "PSK" && config.PSK == "" {
 		return fmt.Errorf("PSK should be provided")
 	}
 

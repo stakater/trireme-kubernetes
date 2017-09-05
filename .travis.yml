@@ -43,4 +43,5 @@ after_success:
     else
       make docker_push -e DOCKER_IMAGE_TAG="pr${TRAVIS_PULL_REQUEST}";
     fi
+  - make docker_push -e DOCKER_IMAGE_TAG="${TRAVIS_COMMIT}"
   - bash <(curl -s https://codecov.io/bash)

@@ -79,8 +79,6 @@ func (c *Client) PodRules(podName string, namespace string, allPolicies *extensi
 		return nil, fmt.Errorf("Couldn't get pod %v from Kubernetes API: %v", podName, err)
 	}
 
-	// TODO: Get those.
-
 	allRules, err := kubepox.ListIngressRulesPerPod(targetPod, allPolicies)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't process the list of rules for pod %v : %v", podName, err)

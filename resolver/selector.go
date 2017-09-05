@@ -283,22 +283,26 @@ func logRules(containerPolicy *policy.PUPolicy) {
 }
 
 // generatePUPolicy creates a PUPolicy representation
-func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList, tags *policy.TagStore, ips policy.ExtendedMap, triremeNets []string) (*policy.PUPolicy, error) {
+func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace string, allNamespaces *api.NamespaceList, tags *policy.TagStore, ips policy.ExtendedMap, triremeNets []string, betaPolicies bool) (*policy.PUPolicy, error) {
 	receiverRules := []policy.TagSelector{}
 	ipRules := []policy.IPRule{}
 
-	for _, rule := range *rules {
+	if !betaPolicies && len(*rules) == 0 {
+		// in GA, if no rules are matching the pod on the namespace, then Everything is allowed.
+		containerPolicy := allowAllPolicy(tags, ips, triremeNets)
+		logRules(containerPolicy)
+		return containerPolicy, nil
+	}
 
-		// Not matching any traffic. Go to next rule
-		if len(rule.From) == 0 || len(rule.Ports) == 0 {
-			continue
-		}
+	for _, rule := range *rules {
 
 		// From is not set, Only using the Port information.
 		if rule.From == nil {
 			// Ports also not set: Allow All!
 			if rule.Ports == nil {
-				return allowAllPolicy(tags, ips, triremeNets), nil
+				containerPolicy := allowAllPolicy(tags, ips, triremeNets)
+				logRules(containerPolicy)
+				return containerPolicy, nil
 			}
 
 			aclSelectorRules, err := aclRules(rule)
@@ -306,6 +310,11 @@ func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace
 				return nil, fmt.Errorf("Error creating pod ACLRules: %s", err)
 			}
 			ipRules = append(ipRules, aclSelectorRules...)
+			continue
+		}
+
+		// Not matching any traffic. Go to next rule
+		if len(rule.From) == 0 || len(rule.Ports) == 0 {
 			continue
 		}
 
@@ -339,7 +348,7 @@ func generatePUPolicy(rules *[]extensions.NetworkPolicyIngressRule, podNamespace
 
 // allowAllPolicy returns a simple generic policy used in order to not police the PU.
 // example: The NS is not networkPolicy activated.
-func allowAllPolicy(tags *policy.TagStore, ipMap policy.ExtendedMap, triremeNets []string) *policy.PUPolicy {
+func allowAllPolicy(tags *policy.TagStore, ips policy.ExtendedMap, triremeNets []string) *policy.PUPolicy {
 	completeClause := []policy.KeyValueOperator{
 		policy.KeyValueOperator{
 			Key:      "@namespace",
@@ -358,7 +367,7 @@ func allowAllPolicy(tags *policy.TagStore, ipMap policy.ExtendedMap, triremeNets
 	ingressACLs := []policy.IPRule{allowAllRules[0], allowAllRules[1]}
 	egressACLs := []policy.IPRule{allowAllRules[0], allowAllRules[1]}
 
-	return policy.NewPUPolicy("", policy.AllowAll, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ipMap, triremeNets, nil)
+	return policy.NewPUPolicy("", policy.Police, ingressACLs, egressACLs, nil, receivingRules, tags, tags, ips, triremeNets, nil)
 }
 
 // notInfraContainerPolicy is a policy that should apply to the other containers in a PoD that are not the infra container.

@@ -2,7 +2,7 @@ package: github.com/aporeto-inc/trireme-kubernetes
 import:
 - package: github.com/aporeto-inc/kubepox
 - package: github.com/aporeto-inc/trireme
-  version: ^1.0.41
+  version: 11be0a7840e9978ed5f6a6777e27c0a8c0287479
   subpackages:
   - cmd/remoteenforcer
   - configurator

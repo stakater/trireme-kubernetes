@@ -4,30 +4,30 @@ metadata:
   labels:
     app: aporeto
   name: trireme
+  namespace: kube-system
 spec:
   template:
     metadata:
       labels:
         app: trireme
     spec:
+      serviceAccountName: trireme-account
       hostNetwork: true
       hostPID: true
       containers:
         -  name: trireme
            image: aporeto/trireme-kubernetes
            env:
-             - name: SYNC_EXISTING_CONTAINERS
-               value: "true"
-             - name: TRIREME_NETS
-               value: 10.0.0.0/8
-             - name: TRIREME_AUTH_TYPE
+             - name: TRIREME_AUTHTYPE
                value: PSK
+             - name: TRIREME_LOGLEVEL
+               value: debug
              - name: TRIREME_PSK
                valueFrom:
                  secretKeyRef:
                    name: trireme
                    key: triremepsk
-             - name: KUBERNETES_NODE
+             - name: TRIREME_KUBENODENAME
                valueFrom:
                  fieldRef:
                    fieldPath: spec.host
