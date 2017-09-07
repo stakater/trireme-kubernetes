@@ -12,4 +12,4 @@ ADD trireme-kubernetes /opt/trireme/trireme-kubernetes
 ADD run.sh /opt/trireme/run.sh
 
 WORKDIR /opt/trireme
-CMD ./trireme-kubernetes
+CMD ["/trireme-kubernetes"] 

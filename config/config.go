@@ -91,6 +91,7 @@ func LoadConfig() (*Configuration, error) {
 	if len(os.Args) > 1 {
 		if os.Args[1] == "enforce" {
 			config.Enforce = true
+			config.LogLevel = viper.GetString("LogLevel")
 			return &config, nil
 		}
 	}
