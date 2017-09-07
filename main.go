@@ -17,6 +17,7 @@ import (
 	"github.com/aporeto-inc/trireme/configurator"
 	"github.com/aporeto-inc/trireme/enforcer"
 	"github.com/aporeto-inc/trireme/enforcer/utils/tokens"
+	tlog "github.com/aporeto-inc/trireme/log"
 	"github.com/aporeto-inc/trireme/monitor"
 
 	"go.uber.org/zap"
@@ -166,7 +167,10 @@ func setLogs(logLevel string) error {
 
 	// Set the logger
 	switch logLevel {
-	case "trace", "debug":
+	case "trace":
+		tlog.Trace = true
+		zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
+	case "debug":
 		zapConfig.Level = zap.NewAtomicLevelAt(zap.DebugLevel)
 	case "info":
 		zapConfig.Level = zap.NewAtomicLevelAt(zap.InfoLevel)
