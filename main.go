@@ -50,8 +50,6 @@ func main() {
 
 	if !config.Enforce {
 		banner(version.VERSION, version.REVISION)
-	} else {
-		config.LogLevel = "debug"
 	}
 
 	err = setLogs(config.LogLevel)
