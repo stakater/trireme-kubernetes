@@ -11,22 +11,6 @@ The following env variables need to be adapted out of the provided daemonSet:
 * For the PSK Version:
 ```yaml
 
-env:
-  - name: SYNC_EXISTING_CONTAINERS
-    value: "true"
-  - name: TRIREME_NETS
-    value: 10.0.0.0/8
-  - name: TRIREME_AUTH_TYPE
-    value: PSK
-  - name: TRIREME_PSK
-    valueFrom:
-      secretKeyRef:
-        name: trireme
-        key: triremepsk
-  - name: KUBERNETES_NODE
-    valueFrom:
-      fieldRef:
-        fieldPath: spec.host
 ```
 
 The DaemonSet expects to find the PSK in the Kube secret `trireme` with id `triremepsk`
@@ -34,21 +18,6 @@ The DaemonSet expects to find the PSK in the Kube secret `trireme` with id `trir
 * For the PKI Version:
 
 ```yaml
-env:
-  - name: SYNC_EXISTING_CONTAINERS
-    value: "true"
-  - name: TRIREME_NETS
-    value: 10.0.0.0/8
-  - name: TRIREME_AUTH_TYPE
-    value: PKI
-  - name: TRIREME_PKI_MOUNT
-    value: /var/trireme/
-  - name: TRIREME_CERT_ANNOTATION
-    value: TRIREME
-  - name: KUBERNETES_NODE
-    valueFrom:
-      fieldRef:
-        fieldPath: spec.host
 ```
 The DaemonSet expects to find the PKI files on a local directory `/var/trireme`
 

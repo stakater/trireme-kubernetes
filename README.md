@@ -3,78 +3,71 @@
 [![Twitter URL](https://img.shields.io/badge/twitter-follow-blue.svg)](https://twitter.com/aporeto_trireme) [![Slack URL](https://img.shields.io/badge/slack-join-green.svg)](https://triremehq.slack.com/messages/general/) [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](https://www.apache.org/licenses/LICENSE-2.0) [![Documentation](https://img.shields.io/badge/docs-godoc-blue.svg)](https://godoc.org/github.com/aporeto-inc/trireme)
 [![Analytics](https://ga-beacon.appspot.com/UA-90327502-1/welcome-page)](https://github.com/igrigorik/ga-beacon)
 
-Trireme-kubernetes is a Zero-Trust networking implementation (based on the Trireme library) specifically for Kubernetes.
-Kubernetes defines an API for NetworkPolicies. More info over here:
+<img src="https://www.aporeto.com/wp-content/uploads/2016/10/trireme-logo-final-b.png" width="200">
 
-* http://kubernetes.io/docs/user-guide/networkpolicies/
-* http://kubernetes.io/docs/api-reference/extensions/v1beta1/definitions/#_v1beta1_networkpolicy
+Trireme-Kubernetes is a Simple, Straightforward implementation of the NetworkPolicy API for Kubernetes. It is completely agnostic to your existing networking solution.
+It is based on the [Trireme](https://github.com/aporeto-inc/trireme) Zero-Trust library
 
-Kubernetes does not enforce natively those NetworkPolicies and requires another library/solution to perform the actual enforcement.
+* [Kubernetes NetworkPolicy definition](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
+* [Declare NetworkPolicies](https://kubernetes.io/docs/tasks/administer-cluster/declare-network-policy/)
 
-The Trireme-kubernetes solution does not rely on any complex control-plane or setup. Any other networking backend can be used.
-Enforcement is performed directly on every node without any shared state propagation (more info at  [Trireme ](https://github.com/aporeto-inc/trireme))
+## Getting started with Trireme-Kubernetes
 
-Kubernetes NetworkPolicies are entirely based on `labels` and `selectors` to hide all the actual IPs for the different endpoints. Trireme is using that exact same approach. IP information is irrelevant even for enforcement. Everything is based on Pod labels.
-
-In order to use Trireme for Kubernetes NetworkPolicies, the only requirement is to launch the kubernetes-trireme run-time on each node.
-
-![Kubernetes cluster with Trireme](docs/pods.png)
-
-:warning: **There is an ongoing bug in Kubernetes 1.6.0 (See  kubernetes/kubernetes#44041) that ignores the Trireme-Kubernetes daemon set request to be launched in the HostPID namespace. This should be resolved in 1.6.2, in the meantime Kubernetes-Trireme cannot be launched as a DaemonSet on 1.6.0** 
-
-## Run-Time deployment.
-
-That run-time can be launched as:
-
-* A Trireme in-cluster pod by using a `daemonSet`. (recommended deployment)
-* A standalone agent/daemon on the node.
-* A container managed outside Kubernetes.
-
-More details on those [options and deployment configuration](https://github.com/aporeto-inc/trireme-kubernetes/tree/master/deployment)
-
-## Node authentication
-
-One of the key features of Trireme is the built-in authentication scheme for different nodes belonging to the same cluster.
-This cryptographic authentication ensures that every label set on a `pod` and used into the NetworkingPolicies rules is protected against man-in-the-middle type attacks.
-This authentication can be based on a full Public Key infrastructure (recommended) or on a PreSharedKey (Should only be used for testing purposes).
-
-* When using `PKI`, The PrivateKey and corresponding CA certificate must be available locally on the node. The run-time uses the Private key for signing all the labels sent on the wire. The corresponding certificate is also published as an `annotation` on the node object in Kubernetes API and can be pre-distributed through the control plane. Each node retrieves the certificate corresponding to all the other nodes by watching the node annotations. (this is optional).
-* For `PreSharedKey` , the key must be available as an  environment variable. If using the `daemonSet` method for deployment, a Kubernetes secret is the simplest method to share a PSK for the whole cluster. This method of distribution is not safe however (See issues around secrets retrieval), it is therefore not recommended to use a PSK or Secrets for distribution for any other purpose than proof of concepts.
-
-## Try it!
-
-Following the NetworkPolicy specifications, a namespace must be explicitly configured to use NetworkPolicies. By default, new `namespaces` are not using Network policies.
-To create a new `demo` `namespace` that is using the networkpolicies:
+Trireme-Kubernetes is focused on being simple and Straightforward to deploy.
+To install Trireme-Kubernetes as a DaemonSet on your cluster, create a serviceAccount with tailored permissions:
 
 ```
-kubectl create -f deployment/PolicyExample/DemoNamespace.yaml
+kubectl create -f https://github.com/aporeto-inc/trireme-kubernetes/deployment/serviceAccount.yaml
 ```
 
-Then create a typical 3 Tier policy system. Those policies replicate the typical set of permissions required for a 3-Tier model (for example, only the backend tier can open a connection to the database tier).
-One policy is created for each tier, specifying exactly which set of labels are allowed to access to each tier:
-
+and deploy the DaemonSet
 ```
-kubectl create -f deployment/PolicyExample/Demo3TierPolicy.yaml
+kubectl create -f https://github.com/aporeto-inc/trireme-kubernetes/deployment/daemonSetPSK.yaml
 ```
 
-Finally, bring up a couple pods in those different tiers:
+## Getting started with policy enforcement:
 
+You can test your setup with NetworkPolicies by using an example two-tier application: [apobeer](https://github.com/aporeto-inc/apobeer)
 ```
-kubectl create -f deployment/PolicyExample/Demo3TierPods.yaml
-```
-
-Try to connect to your pods from other pods:
-* External --> Backend: Forbidden
-```
-kubectl --namespace=demo exec -it external /bin/bash
-wget http://<BACKEND_IP>
+git clone https://github.com/aporeto-inc/apobeer
+cd apobeer/kubernetes
+kubectl create -f .
 ```
 
-* Frontend --> Backend: Allowed
+The deployed [NetworkPolicy](https://github.com/aporeto-inc/apobeer/blob/master/kubernetes/policy.yaml) allows traffic from `frontend` to `backend`, but not from `external` to `backend`
+
+
+![Kubernetes cluster with Trireme](docs/apobeer.png)
+
+As a result, streaming your logs on any frontend pod should give you a stream of Beers:
+
 ```
-kubectl --namespace=demo exec -it frontend /bin/bash
-wget http://<BACKEND_IP>
+$ k logs frontend-mffv7 -n beer
+The beer of the day is:  "Cantillon Blåbær Lambik"
+The beer of the day is:  "Rochefort Trappistes 10"
+[...]
 ```
+
+And as defined by the policy, only `frontend` is able to connect. `external` logs shows that it was unable to connect to `backend`:
+
+```
+$ k logs external-bww23 -n beer
+```
+
+## Kubernetes and Trireme
+
+Kubernetes does not enforce natively those NetworkPolicies and requires a third party solution to do so. Unlike most of the traditional solutions, Trireme is not tight together with a complex networking solution. It therefore gives you the freedom to have one Networking vendor and another NetworkPolicy provider.
+
+Trireme-kubernetes does not rely on any complex control-plane or setup (no need to plug into `etcd`) and enforcement is performed directly on every node without any shared state propagation (more info at  [Trireme ](https://github.com/aporeto-inc/trireme))
+
+
+## Advanced deployment options.
+
+Trireme-Kubernetes [can be deployed](https://github.com/aporeto-inc/trireme-kubernetes/tree/master/deployment) as:
+
+* Fully managed by Kubernetes as a `daemonSet`. (recommended deployment)
+* A standalone daemon process on each node.
+* A docker container managed outside Kubernetes on each node.
 
 ## Prerequisites
 
