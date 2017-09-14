@@ -14,6 +14,14 @@ It is based on the [Trireme](https://github.com/aporeto-inc/trireme) Zero-Trust 
 ## Getting started with Trireme-Kubernetes
 
 Trireme-Kubernetes is focused on being simple and Straightforward to deploy.
+
+Create a PSK shared secret for Trireme-Kubernetes nodes (PKI autogeneration is coming soon):
+
+```
+wget https://github.com/aporeto-inc/trireme-kubernetes/deployment/createPSK.sh
+./createPSK.sh
+```
+
 To install Trireme-Kubernetes as a DaemonSet on your cluster, create a serviceAccount with tailored permissions:
 
 ```
