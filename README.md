@@ -50,7 +50,7 @@ The deployed [NetworkPolicy](https://github.com/aporeto-inc/apobeer/blob/master/
 As a result, streaming your logs on any frontend pod should give you a stream of Beers:
 
 ```
-$ k logs frontend-mffv7 -n beer
+$ kubectl logs frontend-mffv7 -n beer
 The beer of the day is:  "Cantillon Blåbær Lambik"
 The beer of the day is:  "Rochefort Trappistes 10"
 [...]
@@ -59,7 +59,7 @@ The beer of the day is:  "Rochefort Trappistes 10"
 And as defined by the policy, only `frontend` is able to connect. `external` logs shows that it was unable to connect to `backend`:
 
 ```
-$ k logs external-bww23 -n beer
+$ kubectl logs external-bww23 -n beer
 ```
 
 ## Kubernetes and Trireme
