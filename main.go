@@ -81,19 +81,30 @@ func main() {
 		config.KubeNodeName = config.KubeNodeName[:tokens.MaxServerName]
 	}
 
+	// Instantiating LibTrireme
+	options := configurator.DefaultTriremeOptions()
+	options.ServerID = config.KubeNodeName
+	options.TargetNetworks = config.ParsedTriremeNetworks
+	options.RemoteContainer = true
+	options.LocalContainer = false
+	options.LocalProcess = false
+	options.KillContainerError = false
+	options.Resolver = kubernetesPolicy
+
 	if config.AuthType == "PSK" {
 		zap.L().Info("Initializing Trireme with PSK Auth")
 
-		// Starting PSK Trireme
-		trireme, monitor, _ = configurator.NewPSKHybridTriremeWithMonitor(config.KubeNodeName,
-			config.ParsedTriremeNetworks,
-			kubernetesPolicy,
-			nil,
-			nil,
-			true,
-			[]byte(config.PSK),
-			nil,
-			false)
+		options.PKI = false
+		options.PSK = []byte(config.PSK)
+
+		triremeResult, err := configurator.NewTriremeWithOptions(options)
+		if err != nil {
+			zap.L().Fatal("Error instantiating libtrireme", zap.Error(err))
+		}
+
+		trireme = triremeResult.Trireme
+		monitor = triremeResult.DockerMonitor
+
 	}
 
 	if config.AuthType == "PKI" {
@@ -105,18 +116,19 @@ func main() {
 			zap.L().Fatal("Error loading Certificates for PKI Trireme", zap.Error(err))
 		}
 
-		// Starting PKI Trireme
-		trireme, monitor, publicKeyAdder = configurator.NewPKITriremeWithDockerMonitor(config.KubeNodeName,
-			kubernetesPolicy,
-			nil,
-			nil,
-			true,
-			pki.KeyPEM,
-			pki.CertPEM,
-			pki.CaCertPEM,
-			nil,
-			config.RemoteEnforcer,
-			false)
+		options.PKI = true
+		options.KeyPEM = pki.KeyPEM
+		options.CertPEM = pki.CertPEM
+		options.CaCertPEM = pki.CaCertPEM
+
+		triremeResult, err := configurator.NewTriremeWithOptions(options)
+		if err != nil {
+			zap.L().Fatal("Error instantiating libtrireme", zap.Error(err))
+		}
+
+		trireme = triremeResult.Trireme
+		monitor = triremeResult.DockerMonitor
+		publicKeyAdder = triremeResult.PublicKeyAdder
 
 		// Sync the Trireme certs over all the Kubernetes Cluster. Annotations on the
 		// node object are used to hold those certs.
