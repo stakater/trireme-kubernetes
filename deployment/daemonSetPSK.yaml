@@ -5,7 +5,7 @@ metadata:
   name: trireme
   namespace: kube-system
 data:
-  trireme.log_level: trace
+  trireme.log_level: info
   trireme.auth_type: PSK
 ---
 apiVersion: extensions/v1beta1

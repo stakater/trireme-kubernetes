@@ -18,19 +18,19 @@ Trireme-Kubernetes is focused on being simple and Straightforward to deploy.
 Create a PSK shared secret for Trireme-Kubernetes nodes (PKI autogeneration is coming soon):
 
 ```
-wget https://github.com/aporeto-inc/trireme-kubernetes/deployment/createPSK.sh
+wget https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/createPSK.sh
 ./createPSK.sh
 ```
 
 To install Trireme-Kubernetes as a DaemonSet on your cluster, create a serviceAccount with tailored permissions:
 
 ```
-kubectl create -f https://github.com/aporeto-inc/trireme-kubernetes/deployment/serviceAccount.yaml
+kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/serviceAccount.yaml
 ```
 
 and deploy the DaemonSet
 ```
-kubectl create -f https://github.com/aporeto-inc/trireme-kubernetes/deployment/daemonSetPSK.yaml
+ kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/daemonSetPSK.yaml
 ```
 
 ## Getting started with policy enforcement:
