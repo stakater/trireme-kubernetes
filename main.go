@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/aporeto-inc/trireme-kubernetes/auth"
 	"github.com/aporeto-inc/trireme-kubernetes/config"
@@ -88,8 +89,15 @@ func main() {
 	options.RemoteContainer = true
 	options.LocalContainer = false
 	options.LocalProcess = false
+	options.SyncAtStart = true
 	options.KillContainerError = false
 	options.Resolver = kubernetesPolicy
+
+	externalIPCacheTimeout, err := time.ParseDuration("500ms")
+	if err != nil {
+		zap.L().Fatal("Error initializing Trireme with Duration: ", zap.Error(err))
+	}
+	options.ExternalIPCacheValidity = externalIPCacheTimeout
 
 	if config.AuthType == "PSK" {
 		zap.L().Info("Initializing Trireme with PSK Auth")
