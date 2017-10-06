@@ -35,7 +35,9 @@ type Configuration struct {
 	ParsedTriremeNetworks []string
 
 	KubeconfigPath string
-	LogLevel       string
+
+	LogFormat string
+	LogLevel  string
 
 	// Enforce defines if this process is an enforcer process (spawned into POD namespaces)
 	Enforce bool `mapstructure:"Enforce"`
@@ -61,6 +63,7 @@ func LoadConfig() (*Configuration, error) {
 	flag.String("TriremeNetworks", "", "TriremeNetworks")
 	flag.String("KubeconfigPath", "", "KubeConfig used to connect to Kubernetes")
 	flag.String("LogLevel", "", "Log level. Default to info (trace//debug//info//warn//error//fatal)")
+	flag.String("LogFormat", "", "Log Format. Default to human")
 	flag.Bool("Enforce", false, "Run Trireme-Kubernetes in Enforce mode.")
 
 	// Setting up default configuration
@@ -73,6 +76,7 @@ func LoadConfig() (*Configuration, error) {
 	viper.SetDefault("TriremeNetworks", "")
 	viper.SetDefault("KubeconfigPath", "")
 	viper.SetDefault("LogLevel", "info")
+	viper.SetDefault("LogFormat", "human")
 	viper.SetDefault("Enforce", false)
 
 	// Binding ENV variables

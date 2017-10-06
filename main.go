@@ -16,12 +16,12 @@ import (
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme/cmd/remoteenforcer"
 	"github.com/aporeto-inc/trireme/configurator"
-	"github.com/aporeto-inc/trireme/enforcer"
 	"github.com/aporeto-inc/trireme/enforcer/utils/tokens"
 	tlog "github.com/aporeto-inc/trireme/log"
 	"github.com/aporeto-inc/trireme/monitor"
 
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func banner(version, revision string) {
@@ -53,7 +53,7 @@ func main() {
 		banner(version.VERSION, version.REVISION)
 	}
 
-	err = setLogs(config.LogLevel)
+	err = setLogs(config.LogFormat, config.LogLevel)
 	if err != nil {
 		log.Fatalf("Error setting up logs: %s", err)
 	}
@@ -74,7 +74,6 @@ func main() {
 
 	var trireme trireme.Trireme
 	var monitor monitor.Monitor
-	var publicKeyAdder enforcer.PublicKeyAdder
 
 	// Checking statically if the node name is not more than the maximum ServerID
 	// length supported by Trireme.
@@ -93,7 +92,7 @@ func main() {
 	options.KillContainerError = false
 	options.Resolver = kubernetesPolicy
 
-	externalIPCacheTimeout, err := time.ParseDuration("500ms")
+	externalIPCacheTimeout, err := time.ParseDuration("5m")
 	if err != nil {
 		zap.L().Fatal("Error initializing Trireme with Duration: ", zap.Error(err))
 	}
@@ -136,18 +135,6 @@ func main() {
 
 		trireme = triremeResult.Trireme
 		monitor = triremeResult.DockerMonitor
-		publicKeyAdder = triremeResult.PublicKeyAdder
-
-		// Sync the Trireme certs over all the Kubernetes Cluster. Annotations on the
-		// node object are used to hold those certs.
-		// 1) Adds the localCert on the localNode annotation
-		// 2) Sync All the Certs from the other nodes to the CertCache (interface)
-		// 3) Waits and listen for new nodes coming up.
-		certs := auth.NewCertsWatcher(*kubernetesPolicy.KubernetesClient, publicKeyAdder, "abcd")
-		certs.AddCertToNodeAnnotation(*kubernetesPolicy.KubernetesClient, pki.CertPEM)
-		certs.SyncNodeCerts(*kubernetesPolicy.KubernetesClient)
-		go certs.StartWatchingCerts()
-
 	}
 
 	// Register Trireme to the Kubernetes policy resolver
@@ -179,9 +166,20 @@ func main() {
 }
 
 // setLogs setups Zap to
-func setLogs(logLevel string) error {
-	zapConfig := zap.NewDevelopmentConfig()
-	zapConfig.DisableStacktrace = true
+func setLogs(logFormat, logLevel string) error {
+	var zapConfig zap.Config
+
+	switch logFormat {
+	case "json":
+		zapConfig = zap.NewProductionConfig()
+		zapConfig.DisableStacktrace = true
+	default:
+		zapConfig = zap.NewDevelopmentConfig()
+		zapConfig.DisableStacktrace = true
+		zapConfig.DisableCaller = true
+		zapConfig.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {}
+		zapConfig.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	}
 
 	// Set the logger
 	switch logLevel {
