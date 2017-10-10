@@ -1,23 +1,11 @@
 package: github.com/aporeto-inc/trireme-kubernetes
 import:
-- package: github.com/aporeto-inc/kubepox
+  ## Aporeto
 - package: github.com/aporeto-inc/trireme
-  version: 6cce1a7c92002096a48b00ee3dfdf740c938c99e
-  subpackages:
-  - cmd/remoteenforcer
-  - configurator
-  - enforcer
-  - enforcer/utils/tokens
-  - monitor
-  - policy
-  - supervisor
-- package: github.com/golang/glog
-- package: github.com/spf13/pflag
-  version: ^1.0.0
-- package: github.com/spf13/viper
-  version: ^1.0.0
-- package: go.uber.org/zap
-  version: ^1.5.0
+  version: 1.0.x
+- package: github.com/aporeto-inc/kubepox
+- package: github.com/aporeto-inc/trireme-csr
+
 - package: k8s.io/apimachinery
   subpackages:
   - pkg/apis/meta/v1

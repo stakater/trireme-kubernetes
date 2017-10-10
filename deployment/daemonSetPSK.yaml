@@ -26,7 +26,7 @@ spec:
       hostPID: true
       containers:
         -  name: trireme
-           image: aporeto/trireme-kubernetes:57be59cd30feb2a150b441b4ea0b320bda29a36f
+           image: aporeto/trireme-kubernetes:latest
            env:
              - name: TRIREME_LOGLEVEL
                valueFrom:

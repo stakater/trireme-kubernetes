@@ -1,32 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: trireme
+  namespace: kube-system
+data:
+  trireme.log_level: trace
+  trireme.auth_type: PKI
+---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
 metadata:
   labels:
     app: aporeto
   name: trireme
+  namespace: kube-system
 spec:
   template:
     metadata:
       labels:
         app: trireme
     spec:
+      serviceAccountName: trireme-account
       hostNetwork: true
       hostPID: true
       containers:
         -  name: trireme
-           image: aporeto/trireme-kubernetes
+           image: aporeto/trireme-kubernetes:latest
            env:
-             - name: SYNC_EXISTING_CONTAINERS
-               value: "true"
-             - name: TRIREME_NETS
-               value: 10.0.0.0/8
-             - name: TRIREME_AUTH_TYPE
-               value: PKI
-             - name: TRIREME_PKI_MOUNT
-               value: /var/trireme/
-             - name: TRIREME_CERT_ANNOTATION
-               value: TRIREME
-             - name: KUBERNETES_NODE
+             - name: TRIREME_LOGLEVEL
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.log_level
+                   name: trireme
+                   optional: true
+             - name: TRIREME_AUTHTYPE
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.auth_type
+                   name: trireme
+             - name: TRIREME_KUBENODENAME
                valueFrom:
                  fieldRef:
                    fieldPath: spec.host
@@ -36,13 +49,8 @@ spec:
              - mountPath: /var/run
                name: dockersock
                readOnly: false
-             - mountPath: /var/trireme
-               name: triremecerts
 
       volumes:
         - name: dockersock
           hostPath:
             path: /var/run
-        - name: triremecerts
-          hostPath:
-            path: /var/trireme

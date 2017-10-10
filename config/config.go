@@ -20,8 +20,9 @@ type Configuration struct {
 	AuthType string
 	// KubeNodeName is the identifier used for this Trireme instance
 	KubeNodeName string
-	// PKIDirectory is the directory where the Key files are stored (is using PKI)
-	PKIDirectory string
+
+	SigningCACert     string
+	SigningCACertData []byte
 	// PSK is the PSK used for Trireme (if using PSK)
 	PSK string
 	// RemoteEnforcer defines if the enforcer is spawned into each POD namespace
@@ -56,7 +57,7 @@ func LoadConfig() (*Configuration, error) {
 	flag.Usage = usage
 	flag.String("AuthType", "", "Authentication type: PKI/PSK")
 	flag.String("KubeNodeName", "", "Node name in Kubernetes")
-	flag.String("PKIDirectory", "", "Directory where the Trireme PKIs are")
+	flag.String("Cacert", "", "Path to the CACert root of trust.")
 	flag.String("PSK", "", "PSK to use")
 	flag.Bool("RemoteEnforcer", true, "Use the Trireme Remote Enforcer.")
 	flag.Bool("BetaNetPolicies", false, "Use old deprecated Beta Network policy model (default: use GA).")

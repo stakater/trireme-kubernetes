@@ -92,12 +92,6 @@ func main() {
 	options.KillContainerError = false
 	options.Resolver = kubernetesPolicy
 
-	externalIPCacheTimeout, err := time.ParseDuration("5m")
-	if err != nil {
-		zap.L().Fatal("Error initializing Trireme with Duration: ", zap.Error(err))
-	}
-	options.ExternalIPCacheValidity = externalIPCacheTimeout
-
 	if config.AuthType == "PSK" {
 		zap.L().Info("Initializing Trireme with PSK Auth")
 
@@ -118,7 +112,7 @@ func main() {
 		zap.L().Info("Initializing Trireme with PKI Auth")
 
 		// Load the PKI Certs/Keys based on config.
-		pki, err := auth.LoadPKI(config.PKIDirectory)
+		pki, err := auth.LoadPKI(config.KubeNodeName, config.KubeconfigPath)
 		if err != nil {
 			zap.L().Fatal("Error loading Certificates for PKI Trireme", zap.Error(err))
 		}
