@@ -95,6 +95,13 @@ func main() {
 	if config.AuthType == "PSK" {
 		zap.L().Info("Initializing Trireme with PSK Auth")
 
+		// Load the PKI Certs/Keys based on config.
+		// TODO: Temporary remove
+		_, err := auth.LoadPKI(config.KubeNodeName, config.KubeconfigPath)
+		if err != nil {
+			zap.L().Fatal("Error loading Certificates for PKI Trireme", zap.Error(err))
+		}
+
 		options.PKI = false
 		options.PSK = []byte(config.PSK)
 
