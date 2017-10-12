@@ -5,6 +5,8 @@ import:
   version: 1.0.x
 - package: github.com/aporeto-inc/kubepox
 - package: github.com/aporeto-inc/trireme-csr
+- package: github.com/aporeto-inc/trireme-statistics
+- package: github.com/aporeto-inc/grafanaclient
 
 - package: k8s.io/apimachinery
   subpackages:

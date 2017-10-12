@@ -9,7 +9,9 @@ import (
 	"time"
 
 	"github.com/aporeto-inc/trireme-kubernetes/auth"
+	"github.com/aporeto-inc/trireme-kubernetes/collector"
 	"github.com/aporeto-inc/trireme-kubernetes/config"
+
 	"github.com/aporeto-inc/trireme-kubernetes/resolver"
 	"github.com/aporeto-inc/trireme-kubernetes/version"
 
@@ -91,6 +93,13 @@ func main() {
 	options.SyncAtStart = true
 	options.KillContainerError = false
 	options.Resolver = kubernetesPolicy
+
+	// Setting up the EventCollector based on the user Config
+	if config.CollectorEndpoint != "" {
+		options.EventCollector = collector.NewInfluxDBCollector(config.CollectorUser, config.CollectorPass, config.CollectorEndpoint)
+	} else {
+		options.EventCollector = collector.NewDefaultCollector()
+	}
 
 	if config.AuthType == "PSK" {
 		zap.L().Info("Initializing Trireme with PSK Auth")

@@ -7,6 +7,9 @@ metadata:
 data:
   trireme.log_level: trace
   trireme.auth_type: PSK
+  trireme.collector_endpoint: http://10.60.2.15:8086
+  trireme.collector_user: aporeto
+  trireme.collector_password: aporeto
 ---
 apiVersion: extensions/v1beta1
 kind: DaemonSet
@@ -38,6 +41,21 @@ spec:
                valueFrom:
                  configMapKeyRef:
                    key: trireme.auth_type
+                   name: trireme
+             - name: TRIREME_COLLECTORENDPOINT
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_endpoint
+                   name: trireme
+             - name: TRIREME_COLLECTORUSER
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_user
+                   name: trireme
+             - name: TRIREME_COLLECTORPASS
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_password
                    name: trireme
              - name: TRIREME_PSK
                valueFrom:
