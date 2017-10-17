@@ -80,7 +80,7 @@ func main() {
 	// Checking statically if the node name is not more than the maximum ServerID
 	// length supported by Trireme.
 	if len(config.KubeNodeName) > tokens.MaxServerName {
-		config.KubeNodeName = config.KubeNodeName[:tokens.MaxServerName]
+		config.KubeNodeName = config.KubeNodeName[len(config.KubeNodeName)-tokens.MaxServerName:]
 	}
 
 	// Instantiating LibTrireme
