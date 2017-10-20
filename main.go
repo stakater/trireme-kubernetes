@@ -96,7 +96,7 @@ func main() {
 
 	// Setting up the EventCollector based on the user Config
 	if config.CollectorEndpoint != "" {
-		options.EventCollector = collector.NewInfluxDBCollector(config.CollectorUser, config.CollectorPass, config.CollectorEndpoint)
+		options.EventCollector = collector.NewInfluxDBCollector(config.CollectorUser, config.CollectorPass, config.CollectorEndpoint, config.CollectorDB, config.CollectorInsecureSkipVerify)
 	} else {
 		options.EventCollector = collector.NewDefaultCollector()
 	}
@@ -130,6 +130,9 @@ func main() {
 		options.KeyPEM = pki.KeyPEM
 		options.CertPEM = pki.CertPEM
 		options.CaCertPEM = pki.CaCertPEM
+		options.SmartToken = pki.SmartToken
+
+		zap.L().Debug("CryptoCert used:", zap.Any("options.CertPEM", options.CertPEM), zap.Any("options.CaCertPEM", options.CaCertPEM), zap.Any("options.SmartToken", options.SmartToken))
 
 		triremeResult, err := configurator.NewTriremeWithOptions(options)
 		if err != nil {

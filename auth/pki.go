@@ -13,9 +13,10 @@ import (
 
 // TriremePKI contains all the keys and cert for the local Trireme node.
 type TriremePKI struct {
-	KeyPEM    []byte
-	CertPEM   []byte
-	CaCertPEM []byte
+	KeyPEM     []byte
+	CertPEM    []byte
+	CaCertPEM  []byte
+	SmartToken []byte
 }
 
 // LoadPKI issue a CSR to Trireme-CSR and returns all the
@@ -64,10 +65,16 @@ func LoadPKI(nodeName string, kubeconfigPath string) (*TriremePKI, error) {
 		return nil, fmt.Errorf("Error Getting cert PEM %s", err)
 	}
 
+	smartToken, err := certManager.GetSmartToken()
+	if err != nil {
+		return nil, fmt.Errorf("Error Getting smartToken %s", err)
+	}
+
 	return &TriremePKI{
-		KeyPEM:    keyPEM,
-		CertPEM:   certPEM,
-		CaCertPEM: caCertPEM,
+		KeyPEM:     keyPEM,
+		CertPEM:    certPEM,
+		CaCertPEM:  caCertPEM,
+		SmartToken: smartToken,
 	}, nil
 }
 

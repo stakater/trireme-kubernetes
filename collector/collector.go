@@ -13,9 +13,9 @@ func NewDefaultCollector() collector.EventCollector {
 }
 
 // NewInfluxDBCollector returns a collector implementation for InfluxDB
-func NewInfluxDBCollector(user, pass, url string) collector.EventCollector {
+func NewInfluxDBCollector(user, pass, url, db string, insecureSkipVerify bool) collector.EventCollector {
 	zap.L().Info("Using Influx collector", zap.String("endpoint", url), zap.String("user", user))
-	collectorInstance, err := influxdb.NewDBConnection(user, pass, url)
+	collectorInstance, err := influxdb.NewDBConnection(user, pass, url, db, insecureSkipVerify)
 	if err != nil {
 		zap.L().Error("Error instantiating Influx collector, using default", zap.String("endpoint", url), zap.String("user", user), zap.Error(err))
 		return NewDefaultCollector()

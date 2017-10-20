@@ -41,9 +41,11 @@ type Configuration struct {
 	LogLevel  string
 
 	// Credentials info for InfluxDB Collector interface
-	CollectorEndpoint string
-	CollectorUser     string
-	CollectorPass     string
+	CollectorEndpoint           string
+	CollectorUser               string
+	CollectorPass               string
+	CollectorDB                 string
+	CollectorInsecureSkipVerify bool
 
 	// Enforce defines if this process is an enforcer process (spawned into POD namespaces)
 	Enforce bool `mapstructure:"Enforce"`
@@ -73,6 +75,8 @@ func LoadConfig() (*Configuration, error) {
 	flag.String("CollectorEndpoint", "", "Endpoint for InfluxDB customer collector")
 	flag.String("CollectorUser", "", "User info for InfluxDB")
 	flag.String("CollectorPass", "", "Pass for InfluxDB")
+	flag.String("CollectorDB", "", "DB for InfluxDB")
+	flag.Bool("CollectorInsecureSkipVerify", false, "InsecureSkipVerify for InfluxDB")
 	flag.Bool("Enforce", false, "Run Trireme-Kubernetes in Enforce mode.")
 
 	// Setting up default configuration
@@ -89,6 +93,8 @@ func LoadConfig() (*Configuration, error) {
 	viper.SetDefault("CollectorEndpoint", "")
 	viper.SetDefault("CollectorUser", "")
 	viper.SetDefault("CollectorPass", "")
+	viper.SetDefault("CollectorDB", "")
+	viper.SetDefault("CollectorInsecureSkipVerify", "")
 	viper.SetDefault("Enforce", false)
 
 	// Binding ENV variables
