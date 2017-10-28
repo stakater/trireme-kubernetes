@@ -5,11 +5,11 @@ import (
 
 	"github.com/aporeto-inc/kubepox"
 
+	api "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/kubernetes"
-	api "k8s.io/client-go/pkg/api/v1"
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -71,8 +71,8 @@ func (c *Client) localNodeOption() metav1.ListOptions {
 	}
 }
 
-// PodRules return the list of all the IngressRules that apply to the pod.
-func (c *Client) PodRules(podName string, namespace string, allPolicies *extensions.NetworkPolicyList) (*[]extensions.NetworkPolicyIngressRule, error) {
+// IngressPodRules return the list of all the IngressRules that apply to the pod.
+func (c *Client) IngressPodRules(podName string, namespace string, allPolicies *networking.NetworkPolicyList) (*[]networking.NetworkPolicyIngressRule, error) {
 	// Step1: Get all the rules associated with this Pod.
 	targetPod, err := c.kubeClient.Core().Pods(namespace).Get(podName, metav1.GetOptions{})
 	if err != nil {
@@ -80,6 +80,21 @@ func (c *Client) PodRules(podName string, namespace string, allPolicies *extensi
 	}
 
 	allRules, err := kubepox.ListIngressRulesPerPod(targetPod, allPolicies)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't process the list of rules for pod %v : %v", podName, err)
+	}
+	return allRules, nil
+}
+
+// EgressPodRules return the list of all the IngressRules that apply to the pod.
+func (c *Client) EgressPodRules(podName string, namespace string, allPolicies *networking.NetworkPolicyList) (*[]networking.NetworkPolicyEgressRule, error) {
+	// Step1: Get all the rules associated with this Pod.
+	targetPod, err := c.kubeClient.Core().Pods(namespace).Get(podName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't get pod %v from Kubernetes API: %v", podName, err)
+	}
+
+	allRules, err := kubepox.ListEgressRulesPerPod(targetPod, allPolicies)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't process the list of rules for pod %v : %v", podName, err)
 	}

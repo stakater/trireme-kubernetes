@@ -3,7 +3,7 @@ package resolver
 import (
 	"fmt"
 
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
+	networking "k8s.io/api/networking/v1"
 	kubecache "k8s.io/client-go/tools/cache"
 )
 
@@ -46,7 +46,7 @@ func (n *NamespaceWatcher) stopWatchingNamespace() {
 //
 // TODO: Eventually go back to an API call to Kubernetes API.
 //
-func (n *NamespaceWatcher) getPolicyList() (*extensions.NetworkPolicyList, error) {
+func (n *NamespaceWatcher) getPolicyList() (*networking.NetworkPolicyList, error) {
 	if n.policyStore == nil {
 		return nil, fmt.Errorf("PolicyStore not initialized correctly")
 	}
@@ -54,11 +54,11 @@ func (n *NamespaceWatcher) getPolicyList() (*extensions.NetworkPolicyList, error
 	storeList := n.policyStore.List()
 
 	// Copy and cast all the store objects to a NetworkPolicyList object
-	networkPolicyList := extensions.NetworkPolicyList{}
-	networkPolicyList.Items = make([]extensions.NetworkPolicy, len(storeList))
+	networkPolicyList := networking.NetworkPolicyList{}
+	networkPolicyList.Items = make([]networking.NetworkPolicy, len(storeList))
 
 	for _, policy := range storeList {
-		networkPolicyList.Items = append(networkPolicyList.Items, *(policy.(*extensions.NetworkPolicy)))
+		networkPolicyList.Items = append(networkPolicyList.Items, *(policy.(*networking.NetworkPolicy)))
 	}
 
 	return &networkPolicyList, nil

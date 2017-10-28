@@ -13,9 +13,9 @@ import (
 	"github.com/aporeto-inc/trireme/monitor"
 	"github.com/aporeto-inc/trireme/policy"
 
+	api "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	api "k8s.io/client-go/pkg/api/v1"
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 
 	"go.uber.org/zap"
 )
@@ -28,12 +28,13 @@ type KubernetesPolicy struct {
 	policyUpdater    trireme.PolicyUpdater
 	KubernetesClient *kubernetes.Client
 	betaPolicies     bool
+	egressPolicies   bool
 	cache            *cache
 	stopAll          chan struct{}
 }
 
 // NewKubernetesPolicy creates a new policy engine for the Trireme package
-func NewKubernetesPolicy(kubeconfig string, nodename string, triremeNetworks []string, betaPolicies bool) (*KubernetesPolicy, error) {
+func NewKubernetesPolicy(kubeconfig string, nodename string, triremeNetworks []string, betaPolicies bool, egressPolicies bool) (*KubernetesPolicy, error) {
 	client, err := kubernetes.NewClient(kubeconfig, nodename)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't create KubernetesClient: %v ", err)
@@ -43,6 +44,7 @@ func NewKubernetesPolicy(kubeconfig string, nodename string, triremeNetworks []s
 		triremeNetworks:  triremeNetworks,
 		KubernetesClient: client,
 		betaPolicies:     betaPolicies,
+		egressPolicies:   egressPolicies,
 		cache:            newCache(),
 	}, nil
 }
@@ -183,15 +185,21 @@ func (k *KubernetesPolicy) resolvePodPolicy(kubernetesPod string, kubernetesName
 		return nil, fmt.Errorf("Couldn't generate current NetPolicies for the namespace %s ", kubernetesNamespace)
 	}
 
-	podRules, err := k.KubernetesClient.PodRules(kubernetesPod, kubernetesNamespace, namespaceRules)
+	ingressPodRules, err := k.KubernetesClient.IngressPodRules(kubernetesPod, kubernetesNamespace, namespaceRules)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't get the NetworkPolicies for Pod %s : %s", kubernetesPod, err)
 	}
+
+	egressPodRules, err := k.KubernetesClient.EgressPodRules(kubernetesPod, kubernetesNamespace, namespaceRules)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't get the NetworkPolicies for Pod %s : %s", kubernetesPod, err)
+	}
+
 	allNamespaces, _ := k.KubernetesClient.AllNamespaces()
 
 	ips := policy.ExtendedMap{policy.DefaultNamespace: pod.Status.PodIP}
 
-	puPolicy, err := generatePUPolicy(podRules, kubernetesNamespace, allNamespaces, policy.NewTagStoreFromMap(podLabels), ips, k.triremeNetworks, k.betaPolicies)
+	puPolicy, err := generatePUPolicy(ingressPodRules, egressPodRules, kubernetesNamespace, allNamespaces, policy.NewTagStoreFromMap(podLabels), ips, k.triremeNetworks, k.betaPolicies, k.egressPolicies)
 	if err != nil {
 		return nil, err
 	}
@@ -370,7 +378,7 @@ func (k *KubernetesPolicy) updatePod(oldPod, updatedPod *api.Pod) error {
 	return nil
 }
 
-func (k *KubernetesPolicy) addNetworkPolicy(addedNP *extensions.NetworkPolicy) error {
+func (k *KubernetesPolicy) addNetworkPolicy(addedNP *networking.NetworkPolicy) error {
 	zap.L().Debug("NetworkPolicy Added.", zap.String("name", addedNP.GetName()), zap.String("namespace", addedNP.GetNamespace()))
 
 	// TODO: Filter on pods from localNode only.
@@ -393,7 +401,7 @@ func (k *KubernetesPolicy) addNetworkPolicy(addedNP *extensions.NetworkPolicy) e
 	return nil
 }
 
-func (k *KubernetesPolicy) deleteNetworkPolicy(deletedNP *extensions.NetworkPolicy) error {
+func (k *KubernetesPolicy) deleteNetworkPolicy(deletedNP *networking.NetworkPolicy) error {
 	zap.L().Debug("NetworkPolicy Deleted.", zap.String("name", deletedNP.GetName()), zap.String("namespace", deletedNP.GetNamespace()))
 
 	// TODO: Filter on pods from localNode only.
@@ -416,7 +424,7 @@ func (k *KubernetesPolicy) deleteNetworkPolicy(deletedNP *extensions.NetworkPoli
 	return nil
 }
 
-func (k *KubernetesPolicy) updateNetworkPolicy(oldNP, updatedNP *extensions.NetworkPolicy) error {
+func (k *KubernetesPolicy) updateNetworkPolicy(oldNP, updatedNP *networking.NetworkPolicy) error {
 	zap.L().Debug("NetworkPolicy Modified", zap.String("name", updatedNP.GetName()), zap.String("namespace", updatedNP.GetNamespace()))
 
 	// TODO: Filter on pods from localNode only.

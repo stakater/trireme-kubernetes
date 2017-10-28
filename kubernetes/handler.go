@@ -1,10 +1,10 @@
 package kubernetes
 
 import (
+	api "k8s.io/api/core/v1"
+	networking "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
-	api "k8s.io/client-go/pkg/api/v1"
-	extensions "k8s.io/client-go/pkg/apis/extensions/v1beta1"
 	"k8s.io/client-go/tools/cache"
 
 	"go.uber.org/zap"
@@ -74,20 +74,20 @@ func (c *Client) CreateLocalPodController(namespace string,
 
 // CreateNetworkPoliciesController creates a controller specifically for NetworkPolicies.
 func (c *Client) CreateNetworkPoliciesController(namespace string,
-	addFunc func(addedApiStruct *extensions.NetworkPolicy) error, deleteFunc func(deletedApiStruct *extensions.NetworkPolicy) error, updateFunc func(oldApiStruct, updatedApiStruct *extensions.NetworkPolicy) error) (cache.Store, cache.Controller) {
-	return CreateResourceController(c.KubeClient().Extensions().RESTClient(), "networkpolicies", namespace, &extensions.NetworkPolicy{}, fields.Everything(),
+	addFunc func(addedApiStruct *networking.NetworkPolicy) error, deleteFunc func(deletedApiStruct *networking.NetworkPolicy) error, updateFunc func(oldApiStruct, updatedApiStruct *networking.NetworkPolicy) error) (cache.Store, cache.Controller) {
+	return CreateResourceController(c.KubeClient().NetworkingV1().RESTClient(), "networkpolicies", namespace, &networking.NetworkPolicy{}, fields.Everything(),
 		func(addedApiStruct interface{}) {
-			if err := addFunc(addedApiStruct.(*extensions.NetworkPolicy)); err != nil {
+			if err := addFunc(addedApiStruct.(*networking.NetworkPolicy)); err != nil {
 				zap.L().Error("Error while handling Add NetworkPolicy", zap.Error(err))
 			}
 		},
 		func(deletedApiStruct interface{}) {
-			if err := deleteFunc(deletedApiStruct.(*extensions.NetworkPolicy)); err != nil {
+			if err := deleteFunc(deletedApiStruct.(*networking.NetworkPolicy)); err != nil {
 				zap.L().Error("Error while handling Delete NetworkPolicy", zap.Error(err))
 			}
 		},
 		func(oldApiStruct, updatedApiStruct interface{}) {
-			if err := updateFunc(oldApiStruct.(*extensions.NetworkPolicy), updatedApiStruct.(*extensions.NetworkPolicy)); err != nil {
+			if err := updateFunc(oldApiStruct.(*networking.NetworkPolicy), updatedApiStruct.(*networking.NetworkPolicy)); err != nil {
 				zap.L().Error("Error while handling Update NetworkPolicy", zap.Error(err))
 			}
 		})

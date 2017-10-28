@@ -69,7 +69,7 @@ func main() {
 	}
 
 	// Create New PolicyEngine based on Kubernetes rules.
-	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeconfigPath, config.KubeNodeName, config.ParsedTriremeNetworks, config.BetaNetPolicies)
+	kubernetesPolicy, err := resolver.NewKubernetesPolicy(config.KubeconfigPath, config.KubeNodeName, config.ParsedTriremeNetworks, config.BetaNetPolicies, config.EgressNetPolicies)
 	if err != nil {
 		zap.L().Fatal("Error initializing KubernetesPolicy: ", zap.Error(err))
 	}
@@ -132,7 +132,7 @@ func main() {
 		options.CaCertPEM = pki.CaCertPEM
 		options.SmartToken = pki.SmartToken
 
-		zap.L().Debug("CryptoCert used:", zap.Any("options.CertPEM", options.CertPEM), zap.Any("options.CaCertPEM", options.CaCertPEM), zap.Any("options.SmartToken", options.SmartToken))
+		zap.L().Debug("CryptoCert used: ", zap.Any("options.CertPEM", options.CertPEM), zap.Any("options.CaCertPEM", options.CaCertPEM), zap.Any("options.SmartToken", options.SmartToken))
 
 		triremeResult, err := configurator.NewTriremeWithOptions(options)
 		if err != nil {
