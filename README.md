@@ -12,26 +12,37 @@ It is based on the [Trireme](https://github.com/aporeto-inc/trireme) Zero-Trust 
 * [Kubernetes NetworkPolicy definition](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
 * [Declare NetworkPolicies](https://kubernetes.io/docs/tasks/administer-cluster/declare-network-policy/)
 
+## Trireme-Kubernetes ecosystem
+
+Trireme-Kubernetes can be installed as a bundle with a couple optional addons:
+
+![Kubernetes-Trireme ecosystem](docs/architecture.png)
+
+* [Trireme-CSR](https://github.com/aporeto-inc/trireme-csr) : An identity service that is used in order to automatically generate a certificate and asymetric keypair for each Trireme-Kubernetes instance
+* [Trireme-Statistics](https://github.com/aporeto-inc/trireme-statistics) bundle: A set of utilities that query InfluxDB in order to display  connection informations in either: Grafana, Chornograf or an example generated graph. Some or all of the visualization backends can be deployed.
+
 ## Getting started with Trireme-Kubernetes
 
 Trireme-Kubernetes is focused on being simple and Straightforward to deploy.
 
-Create a PSK shared secret for Trireme-Kubernetes nodes (PKI autogeneration is coming soon):
+The following commands deploy a standard bundle for Trireme-Kubernetes:
+
+Generate a CA that will be used as the root of trust for the Trireme-Kubernetes ecosystem, and push it into a `kube-system secret`:
 
 ```
-wget https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/createPSK.sh
-./createPSK.sh
+wget https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/gen_pki_ca.sh
+./gen_pki_ca.sh
 ```
 
-To install Trireme-Kubernetes as a DaemonSet on your cluster, create a serviceAccount with tailored permissions:
+Deploy the standard statistics bundle (optional)
 
 ```
-kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/serviceAccount.yaml
+kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/statistics
 ```
 
-and deploy the DaemonSet
+And finally deploy Trireme-CSR (identity generation) and Trireme-Kubernetes as a DaemonSet:
 ```
- kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/daemonSetPSK.yaml
+ kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme
 ```
 
 ## Getting started with policy enforcement:
@@ -70,7 +81,7 @@ Kubernetes does not enforce natively those NetworkPolicies and requires a third 
 Trireme-kubernetes does not rely on any complex control-plane or setup (no need to plug into `etcd`) and enforcement is performed directly on every node without any shared state propagation (more info at  [Trireme ](https://github.com/aporeto-inc/trireme))
 
 
-## Advanced deployment options.
+## Advanced deployment and installation options.
 
 Trireme-Kubernetes [can be deployed](https://github.com/aporeto-inc/trireme-kubernetes/tree/master/deployment) as:
 
@@ -80,8 +91,8 @@ Trireme-Kubernetes [can be deployed](https://github.com/aporeto-inc/trireme-kube
 
 ## Prerequisites
 
+* Trireme requires Kubernetes 1.7 for `ingress` policy only use as well as Kubernetes 1.8 for `egress` policy use.
 * Trireme requires IPTables with access to the `Mangle` module.
 * Trireme requires access to the Docker event API socket (`/var/run/docker.sock` by default)
-* Trireme requires privileged access
-* Trireme requires to run on the Host PID Namespace.
+* Trireme requires privileged access.
 * When deploying with the DaemonSet model, Trireme requires access to the in-cluster service API/Token. The Namespaces/Pods/NetworkPolicies must be available as read-only

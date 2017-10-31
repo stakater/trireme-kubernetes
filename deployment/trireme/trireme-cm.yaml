@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  creationTimestamp: null
+  name: trireme-config
+  namespace: kube-system
+data:
+  trireme.log_level: trace
+  trireme.log_format: human
+  trireme.auth_type: PKI
+  trireme.collector_endpoint: http://10.51.246.26:8086
+  trireme.collector_user: aporeto
+  trireme.collector_password: aporeto
+  trireme.collector_db: flowDB
+  trireme.collector_insecure_skip_verify: "false"
+  trireme.signing_ca_cert: /opt/trireme-csr/configuration/ca-cert.pem
+  trireme.signing_ca_cert_key: /opt/trireme-csr/configuration/ca-key.pem

@@ -1,0 +1,36 @@
+apiVersion: extensions/v1beta1
+kind: ReplicaSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: trireme-influxdb
+  name: trireme-influxdb
+  namespace: kube-system
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: trireme-influxdb
+    spec:
+      containers:
+      - image: influxdb:latest
+        imagePullPolicy: Always
+        name: trireme-influxdb
+        resources: {}
+status:
+  replicas: 0
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: influxdb
+  namespace: kube-system
+spec:
+  selector:
+    app: trireme-influxdb
+  ports:
+    - protocol: TCP
+      name: port2
+      port: 8086
+      targetPort: 8086

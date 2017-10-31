@@ -1,0 +1,50 @@
+apiVersion: extensions/v1beta1
+kind: ReplicaSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: trireme-chronograf
+  name: trireme-chronograf
+  namespace: kube-system
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: trireme-chronograf
+    spec:
+      containers:
+       - image: chronograf:latest
+         command: ["chronograf","--influxdb-url=http://influxdb:8086"]
+         imagePullPolicy: Always
+         name: trireme-chronograf
+         resources: {}
+status:
+  replicas: 0
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: chronograf
+  namespace: kube-system
+spec:
+  selector:
+    app: trireme-chronograf
+  ports:
+    - protocol: TCP
+      port: 8888
+      targetPort: 8888
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: chronograf-public
+  namespace: kube-system
+spec:
+  selector:
+    app: trireme-chronograf
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8888
+  type: LoadBalancer

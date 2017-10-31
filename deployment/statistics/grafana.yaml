@@ -1,0 +1,49 @@
+apiVersion: extensions/v1beta1
+kind: ReplicaSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: trireme-grafana
+  name: trireme-grafana
+  namespace: kube-system
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: trireme-grafana
+    spec:
+      containers:
+       - image: grafana/grafana:latest
+         imagePullPolicy: Always
+         name: trireme-grafana
+         resources: {}
+status:
+  replicas: 0
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: grafana
+  namespace: kube-system
+spec:
+  selector:
+    app: trireme-grafana
+  ports:
+    - protocol: TCP
+      port: 3000
+      targetPort: 3000
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: grafana-public
+  namespace: kube-system
+spec:
+  selector:
+    app: trireme-grafana
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: LoadBalancer

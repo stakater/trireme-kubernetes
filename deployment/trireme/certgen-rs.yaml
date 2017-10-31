@@ -1,0 +1,54 @@
+apiVersion: extensions/v1beta1
+kind: ReplicaSet
+metadata:
+  creationTimestamp: null
+  labels:
+    app: trireme-csr-controller
+  name: trireme-csr-controller
+  namespace: kube-system
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: trireme-csr-controller
+    spec:
+      serviceAccountName: trireme-csr-controller-account
+      containers:
+        image: aporeto/trireme-csr:latest
+        imagePullPolicy: Always
+        name: trireme-csr-controller
+      - env:
+        - name: TRIREME_LOGLEVEL
+          valueFrom:
+            configMapKeyRef:
+              key: trireme.log_level
+              name: trireme-config
+        - name: TRIREME_LOGFORMAT
+          valueFrom:
+            configMapKeyRef:
+              key: trireme.log_format
+              name: trireme-config
+        - name: TRIREME_SIGNINGCACERT
+          valueFrom:
+            configMapKeyRef:
+              key: trireme.signing_ca_cert
+              name: trireme-config
+        - name: TRIREME_SIGNINGCACERTKEY
+          valueFrom:
+            configMapKeyRef:
+              key: trireme.signing_ca_cert_key
+              name: trireme-config
+        - name: TRIREME_SIGNINGCACERTKEYPASS
+          valueFrom:
+            secretKeyRef:
+              name: trireme-cacert
+              key: ca-pass
+              optional: true
+        volumeMounts:
+        - mountPath: /opt/trireme-csr/configuration
+          name: certs
+      volumes:
+      - name: certs
+        secret:
+          secretName: trireme-cacert

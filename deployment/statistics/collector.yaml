@@ -1,0 +1,44 @@
+apiVersion: extensions/v1beta1
+kind: ReplicaSet
+metadata:
+  labels:
+    app: trireme-graph
+  name: trireme-graph
+  namespace: kube-system
+spec:
+  template:
+    metadata:
+      labels:
+        app: trireme-graph
+    spec:
+      containers:
+        - image: aporeto/trireme-statistics:latest
+          imagePullPolicy: Always
+          name: trireme-graph
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: statistics
+  namespace: kube-system
+spec:
+  selector:
+    app: trireme-graph
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: statistics-public
+  namespace: kube-system
+spec:
+  selector:
+    app: trireme-graph
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: LoadBalancer
