@@ -5,10 +5,10 @@ metadata:
   name: trireme-config
   namespace: kube-system
 data:
-  trireme.log_level: trace
+  trireme.log_level: info
   trireme.log_format: human
   trireme.auth_type: PKI
-  trireme.collector_endpoint: http://10.51.246.26:8086
+  trireme.collector_endpoint: http://influxdb:8086
   trireme.collector_user: aporeto
   trireme.collector_password: aporeto
   trireme.collector_db: flowDB

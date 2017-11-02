@@ -15,10 +15,10 @@ spec:
     spec:
       serviceAccountName: trireme-csr-controller-account
       containers:
-        image: aporeto/trireme-csr:latest
+      - image: aporeto/trireme-csr:latest
         imagePullPolicy: Always
         name: trireme-csr-controller
-      - env:
+        env:
         - name: TRIREME_LOGLEVEL
           valueFrom:
             configMapKeyRef:

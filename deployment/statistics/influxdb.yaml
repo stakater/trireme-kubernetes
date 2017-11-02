@@ -31,6 +31,5 @@ spec:
     app: trireme-influxdb
   ports:
     - protocol: TCP
-      name: port2
       port: 8086
       targetPort: 8086

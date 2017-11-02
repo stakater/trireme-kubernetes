@@ -19,7 +19,7 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: statistics
+  name: graph
   namespace: kube-system
 spec:
   selector:
@@ -32,7 +32,7 @@ spec:
 kind: Service
 apiVersion: v1
 metadata:
-  name: statistics-public
+  name: graph-public
   namespace: kube-system
 spec:
   selector:

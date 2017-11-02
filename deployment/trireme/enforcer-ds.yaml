@@ -3,19 +3,20 @@ kind: DaemonSet
 metadata:
   labels:
     app: aporeto
-  name: trireme
+  name: trireme-enforcer
   namespace: kube-system
 spec:
   template:
     metadata:
       labels:
-        app: trireme
+        app: trireme-enforcer
     spec:
       serviceAccountName: trireme-enforcer-account
       hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       hostPID: true
       containers:
-        -  name: trireme
+        -  name: trireme-enforcer
            image: aporeto/trireme-kubernetes:latest
            imagePullPolicy: Always
            env:
@@ -71,7 +72,6 @@ spec:
              - mountPath: /var/run
                name: dockersock
                readOnly: false
-
       volumes:
         - name: dockersock
           hostPath:
