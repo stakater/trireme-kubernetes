@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: trireme-grafana-init
+  namespace: kube-system
+spec:
+  template:
+    metadata:
+      name: trireme-grafana-init
+    spec:
+      containers:
+      - name: trireme-grafana-init
+        image: aporeto/trireme-grafanainit:latest
+        env:
+             - name: TRIREME_LOGLEVEL
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.log_level
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_COLLECTORENDPOINT
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_endpoint
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_COLLECTORUSER
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_user
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_COLLECTORPASS
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_password
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_COLLECTORDB
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_db
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_COLLECTORINSECURESKIPVERIFY
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_insecure_skip_verify
+                   name: trireme-config
+      restartPolicy: Never
