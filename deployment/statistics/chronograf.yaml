@@ -15,9 +15,21 @@ spec:
     spec:
       containers:
        - image: chronograf:latest
-         command: ["chronograf","--influxdb-url=http://influxdb:8086"]
+         command: ["chronograf","--influxdb-url=$TRIREME_INFLUXURL"]
          imagePullPolicy: Always
          name: trireme-chronograf
+         env:
+             - name: TRIREME_LOGLEVEL
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.log_level
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_INFLUXURL
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_endpoint
+                   name: trireme-config
          resources: {}
 status:
   replicas: 0

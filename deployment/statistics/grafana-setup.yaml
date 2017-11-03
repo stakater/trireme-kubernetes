@@ -18,33 +18,58 @@ spec:
                    key: trireme.log_level
                    name: trireme-config
                    optional: true
-             - name: TRIREME_COLLECTORENDPOINT
+             - name: TRIREME_INFLUXURL
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_endpoint
                    name: trireme-config
                    optional: true
-             - name: TRIREME_COLLECTORUSER
+             - name: TRIREME_INFLUXUSERNAME
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_user
                    name: trireme-config
                    optional: true
-             - name: TRIREME_COLLECTORPASS
+             - name: TRIREME_INFLUXPASSWORD
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_password
                    name: trireme-config
                    optional: true
-             - name: TRIREME_COLLECTORDB
+             - name: TRIREME_INFLUXDBNAME
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_db
                    name: trireme-config
                    optional: true
-             - name: TRIREME_COLLECTORINSECURESKIPVERIFY
+             - name: TRIREME_DBSKIPTLS
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_insecure_skip_verify
                    name: trireme-config
+                   optional: true
+             - name: TRIREME_GRAFANAURL
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.grafana_endpoint
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_GRAFANAUSERNAME
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.grafana_user
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_GRAFANAPASSWORD
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.grafana_password
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_GRAFANADBACCESS
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.grafana_access_type
+                   name: trireme-config
+                   optional: true
       restartPolicy: Never

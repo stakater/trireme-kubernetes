@@ -15,6 +15,43 @@ spec:
         - image: aporeto/trireme-statistics:latest
           imagePullPolicy: Always
           name: trireme-graph
+          env:
+             - name: TRIREME_LOGLEVEL
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.log_level
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_INFLUXURL
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_endpoint
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_INFLUXUSERNAME
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_user
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_INFLUXPASSWORD
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_password
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_INFLUXDBNAME
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_db
+                   name: trireme-config
+                   optional: true
+             - name: TRIREME_DBSKIPTLS
+               valueFrom:
+                 configMapKeyRef:
+                   key: trireme.collector_insecure_skip_verify
+                   name: trireme-config
+                   optional: true
 ---
 kind: Service
 apiVersion: v1

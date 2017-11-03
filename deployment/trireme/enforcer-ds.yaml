@@ -36,26 +36,31 @@ spec:
                  configMapKeyRef:
                    key: trireme.collector_endpoint
                    name: trireme-config
+                   optional: true
              - name: TRIREME_COLLECTORUSER
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_user
                    name: trireme-config
+                   optional: true
              - name: TRIREME_COLLECTORPASS
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_password
                    name: trireme-config
+                   optional: true
              - name: TRIREME_COLLECTORDB
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_db
                    name: trireme-config
+                   optional: true
              - name: TRIREME_COLLECTORINSECURESKIPVERIFY
                valueFrom:
                  configMapKeyRef:
                    key: trireme.collector_insecure_skip_verify
                    name: trireme-config
+                   optional: true
              - name: TRIREME_PSK
                valueFrom:
                  secretKeyRef:
