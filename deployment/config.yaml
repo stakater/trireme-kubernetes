@@ -17,12 +17,13 @@ data:
   trireme.signing_ca_cert_key: /opt/trireme-csr/configuration/ca-key.pem
 
   # Trireme-Statistics (Optional)
+  # InfluxDB (Collector Interface)
   trireme.collector_endpoint: http://influxdb:8086
   trireme.collector_user: aporeto
   trireme.collector_password: aporeto
   trireme.collector_db: flowDB
   trireme.collector_insecure_skip_verify: "false"
-
+  # Grafana 
   trireme.grafana_endpoint: http://grafana:3000
   trireme.grafana_user: admin
   trireme.grafana_password: admin
