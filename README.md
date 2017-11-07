@@ -6,7 +6,8 @@
 
 <img src="https://www.aporeto.com/wp-content/uploads/2016/10/trireme-logo-final-b.png" width="200">
 
-Trireme-Kubernetes is a Simple, Straightforward implementation of the NetworkPolicy API for Kubernetes. It is completely agnostic to your existing networking solution.
+Trireme-Kubernetes is a Simple, Straightforward implementation of Kubernetes Network Policies. Unlike most of the NetworkPolicy implementations, it is completely agnostic to your existing networking solution.
+
 It is based on the [Trireme](https://github.com/aporeto-inc/trireme) Zero-Trust library
 
 * [Kubernetes NetworkPolicy definition](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
@@ -14,35 +15,51 @@ It is based on the [Trireme](https://github.com/aporeto-inc/trireme) Zero-Trust 
 
 ## Trireme-Kubernetes ecosystem
 
-Trireme-Kubernetes can be installed as a bundle with a couple optional addons:
+Trireme-Kubernetes can be installed as a bundle with a set of optional addons:
 
 ![Kubernetes-Trireme ecosystem](docs/architecture.png)
 
-* [Trireme-CSR](https://github.com/aporeto-inc/trireme-csr) : An identity service that is used in order to automatically generate a certificate and asymetric keypair for each Trireme-Kubernetes instance
-* [Trireme-Statistics](https://github.com/aporeto-inc/trireme-statistics) bundle: A set of utilities that query InfluxDB in order to display  connection informations in either: Grafana, Chornograf or an example generated graph. Some or all of the visualization backends can be deployed.
+* Trireme-Kubernetes: The enforcement service that police flows based on the NetworkPolicies defined on Kubernetes API
+* [Trireme-CSR](https://github.com/aporeto-inc/trireme-csr) : An identity service that is used in order to automatically generate certificates and asymetric keypair for each Trireme-Kubernetes instance
+* [Trireme-Statistics](https://github.com/aporeto-inc/trireme-statistics) bundle: Monitoring and statistics bundle that rely on InfluxDB. Flows and Container events can be displayed in either: Grafana, Chrnograf or a generated graph specifically for Kubernetes flows. Depending on your use-case, some or all of those frontend tools can be deployed.
 
 ## Getting started with Trireme-Kubernetes
 
 Trireme-Kubernetes is focused on being simple and Straightforward to deploy.
+For any serious deployment, the extensive deployment guide should be followed (That allows to )
 
-The following commands deploy a standard bundle for Trireme-Kubernetes:
+In order to give it a quick and easy try, deploy all the YAML definition files:
 
-Generate a CA that will be used as the root of trust for the Trireme-Kubernetes ecosystem, and push it into a `kube-system secret`:
-
+Optionally, if you are using GKE or another system on which you don't have admin access (For RBAC//ABAC), make sure you can configure additional ABAC//RBAC rules:
+On GKE, specifically:
 ```
-wget https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/gen_pki_ca.sh
+kubectl create clusterrolebinding your-user-cluster-admin-binding --clusterrole=cluster-admin --user=your.google.cloud.email@example.org
+```
+
+1) Checkout the deployment files:
+```
+git clone https://github.com/aporeto-inc/trireme-kubernetes.git
+cd trireme-kubernetes/deployment
+```
+
+2) create the configuration file: (keeping everything by default should be fine)
+```
+kubectl create -f config.yaml
+```
+
+3) Create the Statistic bundle (This will deploy all the possible options):
+```
+kubectl create -f statistics
+```
+
+4) Create a dummy Self-signed `Certificate Authority` for the identity service and adds it as a Kubernetes secret(requires the [tg](https://github.com/aporeto-inc/tg) utility):
+```
 ./gen_pki_ca.sh
 ```
 
-Deploy the standard statistics bundle (optional)
-
+5) Create the Identity service and finally Trireme-Kubernetes:
 ```
-kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/statistics
-```
-
-And finally deploy Trireme-CSR (identity generation) and Trireme-Kubernetes as a DaemonSet:
-```
- kubectl create -f https://raw.githubusercontent.com/aporeto-inc/trireme-kubernetes/master/deployment/trireme
+kubectl create -f trireme
 ```
 
 ## Getting started with policy enforcement:
