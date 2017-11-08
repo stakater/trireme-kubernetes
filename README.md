@@ -6,34 +6,43 @@
 
 <img src="https://www.aporeto.com/wp-content/uploads/2016/10/trireme-logo-final-b.png" width="200">
 
-Trireme-Kubernetes is a Simple, Straightforward implementation of Kubernetes Network Policies. Unlike most of the NetworkPolicy implementations, it is completely agnostic to your existing networking solution.
+----
 
-It is based on the [Trireme](https://github.com/aporeto-inc/trireme) Zero-Trust library
+Trireme-Kubernetes is a simple, straightforward implementation of Kubernetes Network Policies. Yet, it is independent from and work with any networking backend.
+
+Trireme-Kubernetes builds upon a powerful concept of identity based on standard Kubernetes tags.
+
+It is based on the [Trireme](https://github.com/aporeto-inc/trireme) Zero-Trust library.
+
+----
 
 * [Kubernetes NetworkPolicy definition](https://kubernetes.io/docs/concepts/services-networking/network-policies/)
 * [Declare NetworkPolicies](https://kubernetes.io/docs/tasks/administer-cluster/declare-network-policy/)
 
 ## Trireme-Kubernetes ecosystem
 
-Trireme-Kubernetes can be installed as a bundle with a set of optional addons:
+Trireme-Kubernetes is provided as a bundle with a set of optional addons:
 
 ![Kubernetes-Trireme ecosystem](docs/architecture.png)
 
-* Trireme-Kubernetes: The enforcement service that police flows based on the NetworkPolicies defined on Kubernetes API
-* [Trireme-CSR](https://github.com/aporeto-inc/trireme-csr) : An identity service that is used in order to automatically generate certificates and asymetric keypair for each Trireme-Kubernetes instance
-* [Trireme-Statistics](https://github.com/aporeto-inc/trireme-statistics) bundle: Monitoring and statistics bundle that rely on InfluxDB. Flows and Container events can be displayed in either: Grafana, Chrnograf or a generated graph specifically for Kubernetes flows. Depending on your use-case, some or all of those frontend tools can be deployed.
+* Trireme-Kubernetes: The enforcement service which police flows based on standard NetworkPolicies defined on Kubernetes API
+
+* [Trireme-CSR](https://github.com/aporeto-inc/trireme-csr): An identity service that is used in order to automatically generate certificates and asymetric keypair for each Trireme-Kubernetes instance
+
+* [Trireme-Statistics](https://github.com/aporeto-inc/trireme-statistics) bundle: Monitoring and statistics bundle that rely on InfluxDB. Flows and Container events can be displayed in either Grafana, Chronograf or a generated graph specifically for Kubernetes flows. Depending on your use-case, some or all of those frontend tools can be deployed.
 
 ## Getting started with Trireme-Kubernetes
 
 Trireme-Kubernetes is focused on being simple and Straightforward to deploy.
-For any serious deployment, the extensive deployment guide should be followed (That allows to )
+For any serious deployment, the extensive deployment guide should be followed
 
-In order to give it a quick and easy try, deploy all the YAML definition files:
+This section provides a quick and easy way to try Kubernetes.
 
-Optionally, if you are using GKE or another system on which you don't have admin access (For RBAC//ABAC), make sure you can configure additional ABAC//RBAC rules:
-On GKE, specifically:
+If you are using GKE or another system on which you don't have admin access (For RBAC//ABAC), make sure you can configure additional ABAC//RBAC rules.
+On GKE, specifically (replace with your account email address):
+
 ```
-kubectl create clusterrolebinding your-user-cluster-admin-binding --clusterrole=cluster-admin --user=your.google.cloud.email@example.org
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=your.google.cloud.email@example.org
 ```
 
 1) Checkout the deployment files:
@@ -64,7 +73,7 @@ kubectl create -f trireme
 
 ## Getting started with policy enforcement:
 
-You can test your setup with NetworkPolicies by using an example two-tier application: [apobeer](https://github.com/aporeto-inc/apobeer)
+You can test your setup with NetworkPolicies by using an example two-tier application such as [apobeer](https://github.com/aporeto-inc/apobeer)
 ```
 git clone https://github.com/aporeto-inc/apobeer
 cd apobeer/kubernetes
@@ -93,9 +102,11 @@ $ kubectl logs external-bww23 -n beer
 
 ## Kubernetes and Trireme
 
-Kubernetes does not enforce natively those NetworkPolicies and requires a third party solution to do so. Unlike most of the traditional solutions, Trireme is not tight together with a complex networking solution. It therefore gives you the freedom to have one Networking vendor and another NetworkPolicy provider.
+Kubernetes does not enforce natively NetworkPolicies and requires a third party solution to do so.
 
-Trireme-kubernetes does not rely on any complex control-plane or setup (no need to plug into `etcd`) and enforcement is performed directly on every node without any shared state propagation (more info at  [Trireme ](https://github.com/aporeto-inc/trireme))
+Unlike most of the traditional solutions, Trireme is not tight together with a complex networking solution. It therefore gives you the freedom to use one Networking implementation if needed and another NetworkPolicy provider.
+
+Trireme-kubernetes does not rely on any distributed control-plane or setup (no need to plug into `etcd`). Enforcement is performed directly on every node without any shared state propagation (more info at  [Trireme ](https://github.com/aporeto-inc/trireme))
 
 
 ## Advanced deployment and installation options.
