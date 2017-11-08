@@ -83,6 +83,14 @@ Configuration is filled in through a standard Kubernetes ConfigMap (`config.yaml
 
 ## PSK vs PKI
 
+Authentication ensures that each identity associated with Kubernetes Pods are not modified or altered before reaching the destination, effectively making a Man In the Middle almost impossible to perform (unlike any traditional enforcement solution relying on IP headers)
+Trireme-Kubernetes supports two Authentication modes:
+
+* `PSK` (Or Preshared Key) is the easiest option if the identity service is not used (Trireme-CSR). A preshared password must be generated and set as a Kubernetes secret. The PSK will then be used to sign the identity segment of Pods flows.
+* `PKI` is more secure and should be used whenever possible. A unique PKI must be used by each instance of Trireme-Kubernetes. In order to generate and distribute the Keypairs and associated certificates to all Trireme-Kubernetes instances, two options are possible:
+- Manual: In this case the user is responsible for generating a unique PKI per trireme-Kubernetes instance and mounting it to each single pod instance.
+- Automatic through Trireme-CSR: Use the Trireme-CSR identity service that will issue a Unique KeyPair and certificate upon Trireme-Kubernetes startup.
+
 ## Identity service
 
 ## Statistics service
