@@ -2,7 +2,7 @@
 
 Trireme-Kubernetes is provided as a bundle. Installation of one or more components depends on your use case. For a bare-minimum cluster deployment with Network Policy nforcement, you only need to deploy the Trireme-Kubernetes DaemonSet.
 
-![Kubernetes-Trireme ecosystem](docs/architecture.png)
+![Kubernetes-Trireme ecosystem](../docs/architecture.png)
 
 For a Quick and easy way to try Trireme-Kubernetes, follow the instructions to deploy the whole bundle as described on the main README.
 
