@@ -71,6 +71,18 @@ kubectl create -f statistics
 kubectl create -f trireme
 ```
 
+At this point, the whole framework is up and running and you can access the Services in order to display your NetworkPolicy metrics:
+
+```
+chronograf             ClusterIP      10.43.241.132   <none>          8888/TCP        20h
+chronograf-public      LoadBalancer   10.43.254.222   35.194.27.144   80:32153/TCP    20h
+grafana                ClusterIP      10.43.241.104   <none>          3000/TCP        20h
+grafana-public         LoadBalancer   10.43.241.153   35.194.27.32    80:30716/TCP    20h
+graph                  ClusterIP      10.43.248.120   <none>          8080/TCP        20h
+graph-public           LoadBalancer   10.43.254.146   35.194.27.212   80:31709/TCP    20h
+influxdb               ClusterIP      10.43.245.190   <none>          8086/TCP        20h
+```
+
 ## Getting started with policy enforcement:
 
 You can test your setup with NetworkPolicies by using an example two-tier application such as [apobeer](https://github.com/aporeto-inc/apobeer)
