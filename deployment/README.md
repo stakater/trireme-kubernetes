@@ -47,7 +47,8 @@ Trireme-Graph is a very simple frontend that queries InfluxDB and displays visua
 
 ## Configuration file
 
-Configuration is filled in through a standard Kubernetes ConfigMap (`config.yaml`). There is a single ConfigMap used for the whole bundle.
+Configuration is filled in through a standard Kubernetes ConfigMap (`config.yaml`). There is a single ConfigMap used for the whole bundle. The config map should be the only place where parameters need to be changed.
+Those parameters and associated defaults are:
 
 ```
   # Logging: Could be debug, info, warning, error. Info is recommended.
@@ -88,9 +89,29 @@ Trireme-Kubernetes supports two Authentication modes:
 
 * `PSK` (Or Preshared Key) is the easiest option if the identity service is not used (Trireme-CSR). A preshared password must be generated and set as a Kubernetes secret. The PSK will then be used to sign the identity segment of Pods flows.
 * `PKI` is more secure and should be used whenever possible. A unique PKI must be used by each instance of Trireme-Kubernetes. In order to generate and distribute the Keypairs and associated certificates to all Trireme-Kubernetes instances, two options are possible:
+
 - Manual: In this case the user is responsible for generating a unique PKI per trireme-Kubernetes instance and mounting it to each single pod instance.
 - Automatic through Trireme-CSR: Use the Trireme-CSR identity service that will issue a Unique KeyPair and certificate upon Trireme-Kubernetes startup.
 
 ## Identity service
 
+The identity service is needed only if you chose to use a `PKI` deployment model. In this case, the identity service will automatically generate a keypair for each Trireme-Kubernetes instance. The Keypair and associated certificate will be generated using the CA provided in the previous section.
+
+There is also the option to distribute the identity manually without the help of the identity-service. In which case the user is responsible for mounting the certificate and keypair on each pod instance (on each node). This process will be documented shortly.
+
+All the code behind the identity service can be found on the [Trireme-CSR](https://github.com/aporeto-inc/trireme-csr) repository
+
 ## Statistics service
+
+The statistics service bundle is an optional service that is based on a basic InfluxDB Metric database. Each flow and container event going through the cluster is recorded as a Time series event.
+
+Multiple tools can be used to extract analytics out of those events. Trireme ships with three very basic options. For more complex use-cases it is very easy to use the InfluxDB Interface directly.
+
+In order to use the Statistics service, an InfluxDB service must be available. For any serious usage, it is recommended to deploy a redundant InfluxDB endpoint.
+A simple standalone instance of InfluxDB can be instantiated by using the `statistics/influxdb.yaml` definition.
+
+The three options for displaying metrics and analytics are:
+
+* Chronograf: The official display tool for InfluxDB. Service and pod definitions can be displayed with a simple Database Query
+* Grafana: Grafana is preconfigured to connect to InfluxDB and display Container and Flow events in a table.
+* Trireme-graph: Connects to InfluxDB and generates a graph that represents interaction between pods. The graph can be customized to show only links and pods that have events in a specific namespace and timefrane
