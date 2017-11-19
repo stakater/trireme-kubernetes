@@ -1,28 +1,23 @@
 package main
 
 import (
-	"crypto/md5"
-	"encoding/base64"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/aporeto-inc/trireme-kubernetes/auth"
 	"github.com/aporeto-inc/trireme-kubernetes/collector"
 	"github.com/aporeto-inc/trireme-kubernetes/config"
-
 	"github.com/aporeto-inc/trireme-kubernetes/resolver"
+	"github.com/aporeto-inc/trireme-kubernetes/utils"
 	"github.com/aporeto-inc/trireme-kubernetes/version"
 
 	"github.com/aporeto-inc/trireme"
 	"github.com/aporeto-inc/trireme/cmd/remoteenforcer"
 	"github.com/aporeto-inc/trireme/configurator"
-	"github.com/aporeto-inc/trireme/enforcer/utils/tokens"
 	tlog "github.com/aporeto-inc/trireme/log"
 	"github.com/aporeto-inc/trireme/monitor"
 
@@ -81,7 +76,7 @@ func main() {
 	var trireme trireme.Trireme
 	var monitor monitor.Monitor
 
-	triremeNodeName := generateNodeName(config.KubeNodeName)
+	triremeNodeName := utils.GenerateNodeName(config.KubeNodeName)
 
 	// Instantiating LibTrireme
 	options := configurator.DefaultTriremeOptions()
@@ -169,24 +164,6 @@ func main() {
 	zap.L().Debug("Trireme stopped")
 
 	zap.L().Info("Everything stopped. Bye Kubernetes!")
-}
-
-// generateNodeName generates a valid Trireme ID for this instance of the enforcer.
-// It uses an MD5 base algorithm and is adjusted to the maximum length for trireme.
-func generateNodeName(kubeNodeName string) string {
-	h := md5.New()
-	io.WriteString(h, kubeNodeName)
-	md5Result := h.Sum(nil)
-	b64Result := strings.ToLower(base64.StdEncoding.EncodeToString(md5Result))
-	triremeNodeName := "trireme-" + b64Result
-
-	// Checking statically if the node name is not more than the maximum ServerID
-	// length supported by Trireme.
-	if len(triremeNodeName) > tokens.MaxServerName {
-		triremeNodeName = triremeNodeName[len(triremeNodeName)-tokens.MaxServerName:]
-	}
-
-	return triremeNodeName
 }
 
 // setLogs setups Zap to

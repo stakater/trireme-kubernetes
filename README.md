@@ -12,7 +12,7 @@ Trireme-Kubernetes is a simple, straightforward implementation of Kubernetes Net
 
 Trireme-Kubernetes builds upon a powerful concept of identity based on standard Kubernetes tags.
 
-It is based on the [Trireme](https://github.com/aporeto-inc/trireme) Zero-Trust library.
+It is based on the [Trireme Zero-Trust library](https://github.com/aporeto-inc/trireme-lib).
 
 ----
 
